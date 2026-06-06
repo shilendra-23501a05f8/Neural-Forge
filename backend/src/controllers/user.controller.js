@@ -83,18 +83,41 @@ const userLogoutController = async (req, res) => {
 
     await  BlackListModel.create({
         token
-    }) 
-
-
+    })  
     return res.status(200).json({
         status: "Success",
         message: "User Logout Successful" 
     });
 };
 
+async function getUserController(req, res) {
+    // 1. Notice the change to req.user.userId to match your login token structure
+    const userId = req.user.userId || req.user.id; 
+    
+    const user = await userModel.findById(userId);
+    
+    // 2. Add a safety check to handle null values gracefully
+    if (!user) {
+        return res.status(404).json({ 
+            status: "Failed", 
+            message: "User account no longer exists in the database." 
+        });
+    }
+
+    res.status(200).json({ 
+        message: "User details fetched successfully", 
+        user: { 
+            id: user._id, 
+            username: user.username, // Make sure your user schema actually has a "username" field, or use user.name
+            email: user.email 
+        } 
+    });
+}
+
 
 module.exports = {
     userRegisterController,
     userloginController,
-    userLogoutController
+    userLogoutController,
+    getUserController
 }
