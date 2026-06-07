@@ -1,6 +1,12 @@
 const { GoogleGenAI } = require("@google/genai");
 const { z } = require("zod");
 
+
+console.log(
+  "API KEY LOADED:",
+  !!process.env.GOOGLE_GEMINI_API_KEY
+);
+
 const ai = new GoogleGenAI({
   apiKey: process.env.GOOGLE_GEMINI_API_KEY
 });
