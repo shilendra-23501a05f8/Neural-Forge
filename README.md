@@ -57,14 +57,17 @@ The project directory consists of the following components:
     - **[routes/](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/routes)**:
       - [user.routes.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/routes/user.routes.js): User registration, login, logout, and self retrieval routes.
       - [interview.routes.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/routes/interview.routes.js): PDF resume upload and AI analysis generation routes.
+      - [job.routes.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/routes/job.routes.js): Agentic job search endpoints.
     - **[controllers/](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers)**:
       - [user.controller.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/user.controller.js): Route handlers for auth operations. Contains [userRegisterController](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/user.controller.js#L6), [userloginController](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/user.controller.js#L31), [userLogoutController](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/user.controller.js#L67), and [getUserController](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/user.controller.js#L93).
       - [interview.controller.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/interview.controller.js): Handler for uploading, generating, and retrieving reports. Contains [generateUserInterviewReport](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/interview.controller.js#L7) and [getUserInterviewReportsHistory](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/interview.controller.js#L46).
+      - [job.controller.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/job.controller.js): Handler for executing agentic job retrieval via [retrieveAgenticJobs](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/job.controller.js#L3).
     - **[middlewares/](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/middlewares)**:
       - [auth.middleware.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/middlewares/auth.middleware.js): Token checking and blacklisting check via [authUser](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/middlewares/auth.middleware.js#L4).
       - [file.middleware.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/middlewares/file.middleware.js): Sets up [upload](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/middlewares/file.middleware.js#L3) via Multer memory storage.
     - **[services/](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/services)**:
-      - [ai.services.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/services/ai.services.js): Core integration with Gemini API containing [generateInterviewReport](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/services/ai.services.js#L45).
+      - [ai.services.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/services/ai.services.js): Core integration with Gemini API containing [generateInterviewReport](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/services/ai.services.js#L45) and [retrieveJobsAgentically](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/services/ai.services.js#L145).
+      - [job.service.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/services/job.service.js): Job scrapers for guest LinkedIn APIs and public Unstop opportunity search boards.
     - **[models/](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/models)**:
       - [user.models.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/models/user.models.js): MongoDB schema defining user credentials.
       - [BlackList.model.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/models/BlackList.model.js): Token blacklist storage for logging out users.
@@ -268,5 +271,44 @@ npm install
         "updatedAt": "2026-06-08T11:30:00.000Z"
       }
     ]
+  }
+  ```
+
+---
+
+### 💼 Job Discovery Endpoints
+
+#### 1. Search Jobs Agentically
+- **Route**: `POST /api/jobs/search`
+- **Headers**: Cookies must contain `token=<jwt_token>` (required)
+- **Body (`application/json`)**:
+  ```json
+  {
+    "jobRole": "React Developer"
+  }
+  ```
+- **Response (`200 OK`)** (Runs the `gemini-3-flash-preview` Agentic Loop, executing the public guest search scraper tool to retrieve real job listings):
+  ```json
+  {
+    "status": "Successful",
+    "response": {
+      "jobRole": "React Developer",
+      "jobs": [
+        {
+          "title": "React Frontend Engineer",
+          "company": "TechInnovations Inc.",
+          "location": "Bengaluru, Karnataka (Hybrid)",
+          "link": "https://www.linkedin.com/jobs/view/...",
+          "platform": "LinkedIn"
+        },
+        {
+          "title": "React Developer Intern",
+          "company": "Pioneer Learning Platforms",
+          "location": "New Delhi, India (On-site)",
+          "link": "https://unstop.com/o/...",
+          "platform": "Unstop"
+        }
+      ]
+    }
   }
   ```

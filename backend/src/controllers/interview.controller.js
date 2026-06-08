@@ -5,43 +5,70 @@ const aiService = require("../services/ai.services")
 const interviewReportModel = require("../models/interviewReportModel")
 
 async function generateUserInterviewReport(req, res) {
-  const resume = req.file;
+  try {
+    const resume = req.file;
 
-  if (!resume) {
-    return res.status(400).json({
-      message: "Resume file is required"
+    if (!resume) {
+      return res.status(400).json({
+        message: "Resume file is required"
+      });
+    }
+
+    const { selfDescription, jobDescription } = req.body;
+
+    let pdfData;
+    try {
+      pdfData = await pdfParse(resume.buffer);
+    } catch (parseError) {
+      console.error("PDF Parse Error:", parseError);
+      return res.status(400).json({
+        status: "Failed",
+        message: "Failed to parse PDF resume. Please ensure the file is a valid, unencrypted PDF document."
+      });
+    }
+
+    let response;
+    try {
+      response = await aiService.generateInterviewReport({
+        resume: pdfData.text,
+        jobDescription: jobDescription || "General Profile Assessment",
+        selfDescription: selfDescription || ""
+      });
+    } catch (aiError) {
+      console.error("AI Generation Error:", aiError);
+      return res.status(500).json({
+        status: "Failed",
+        message: "Failed to generate AI analysis report. " + (aiError.message || "")
+      });
+    }
+
+    const userId = req.user ? (req.user.userId || req.user.id) : null;
+
+    const savedReport = await interviewReportModel.create({
+      jobDescription: jobDescription || "General Profile Assessment",
+      resume: pdfData.text,
+      selfDescription: selfDescription || "",
+      matchScore: response.matchScore,
+      technicalQuestions: response.technicalQuestions,
+      behavioralQuestions: response.behavioralQuestions,
+      skillGaps: response.skillGaps,
+      preparationPlan: response.preparationPlan,
+      user: userId,
+      title: response.title || "Career Profile Assessment"
+    });
+
+    res.status(201).json({
+      status: "Successful",
+      response: savedReport
+    });
+  } catch (err) {
+    console.error("Internal Server Error in generateUserInterviewReport:", err);
+    res.status(500).json({
+      status: "Failed",
+      message: "An unexpected error occurred while analyzing the resume.",
+      error: err.message
     });
   }
-
-  const { selfDescription, jobDescription } = req.body;
-
-  const pdfData = await pdfParse(resume.buffer);
-
-  const response = await aiService.generateInterviewReport({
-    resume: pdfData.text,
-    jobDescription: jobDescription || "General Profile Assessment",
-    selfDescription: selfDescription || ""
-  });
-
-  const userId = req.user ? (req.user.userId || req.user.id) : null;
-
-  const savedReport = await interviewReportModel.create({
-    jobDescription: jobDescription || "General Profile Assessment",
-    resume: pdfData.text,
-    selfDescription: selfDescription || "",
-    matchScore: response.matchScore,
-    technicalQuestions: response.technicalQuestions,
-    behavioralQuestions: response.behavioralQuestions,
-    skillGaps: response.skillGaps,
-    preparationPlan: response.preparationPlan,
-    user: userId,
-    title: response.title || "Career Profile Assessment"
-  });
-
-  res.status(201).json({
-    status: "Successful",
-    response: savedReport
-  });
 }
 
 async function getUserInterviewReportsHistory(req, res) {

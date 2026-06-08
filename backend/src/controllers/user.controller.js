@@ -108,7 +108,7 @@ async function getUserController(req, res) {
         message: "User details fetched successfully", 
         user: { 
             id: user._id, 
-            username: user.username, // Make sure your user schema actually has a "username" field, or use user.name
+            name: user.name,
             email: user.email 
         } 
     });
