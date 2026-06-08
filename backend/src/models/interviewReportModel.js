@@ -49,6 +49,24 @@ const skillGapSchema = new mongoose.Schema({
     _id: false
 })
 
+const resourceSchema = new mongoose.Schema({
+    title: {
+        type: String,
+        required: [ true, "Resource title is required" ]
+    },
+    url: {
+        type: String,
+        required: [ true, "Resource URL is required" ]
+    },
+    type: {
+        type: String,
+        enum: [ "youtube", "official" ],
+        required: [ true, "Resource type is required" ]
+    }
+}, {
+    _id: false
+})
+
 const preparationPlanSchema = new mongoose.Schema({
     day: {
         type: Number,
@@ -61,7 +79,8 @@ const preparationPlanSchema = new mongoose.Schema({
     tasks: [ {
         type: String,
         required: [ true, "Task is required" ]
-    } ]
+    } ],
+    resources: [ resourceSchema ]
 })
 
 const interviewReportSchema = new mongoose.Schema({

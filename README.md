@@ -1,94 +1,101 @@
-# 🚀 GenAI-Resume Backend
+# 🚀 VidyaGuide: Agentic AI Career Coach & Resume Mentor
 
-An AI-powered recruitment and interview preparation backend that parses PDF resumes, matches them against job descriptions, and utilizes the Google Gemini API to generate tailored interview questions, skill gap analyses, and weekly preparation plans.
+<div align="center">
 
----
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
+![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![Google Gemini](https://img.shields.io/badge/Google%20Gemini-8E75C2?style=for-the-badge&logo=googlegemini&logoColor=white)
 
-## ✨ Features
+An advanced, end-to-end **Agentic AI-powered career coach** designed to automate resume feedback, track professional skill gaps, generate custom timelines, run adaptive technical interview quizzes, and fetch matching job listings using an intelligent scraping loop.
 
-- **Auth System**: Full user registration, login, logout, and token blacklisting using JWT and Cookie Parser.
-- **PDF Resume Parsing**: Extracts text dynamically from uploaded PDF resumes in-memory.
-- **Google Gemini Integration**: Uses `gemini-2.5-flash` to execute structured LLM prompt reasoning and schema compliance.
-- **Detailed Interview Coaching Reports**:
-  - **Match Score**: Candidate profile alignment percentage (0-100%).
-  - **Technical Interview Questions**: 5-7 customized questions with candidate-intent explanations and optimal answers.
-  - **Behavioral Questions**: 3-5 tailored behavioral questions.
-  - **Skill Gaps**: Realistic assessment of developer skill gaps, tagged with severity (`low`, `medium`, `high`).
-  - **7-day Preparation Plan**: Day-by-day customized curriculum of focus topics and tasks.
+</div>
 
 ---
 
-## 🛠️ Tech Stack & Dependencies
+## 🗺️ System Architecture
 
-All dependencies are defined in [backend/package.json](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/package.json):
+The diagram below details the data flow and integration between the Vite client, the MERN server, and the Google Gemini API agent:
 
-### Core Server
-- **Express** (`^5.2.1`): Main web framework for building APIs.
-- **Mongoose** (`^9.6.3`): MongoDB Object Data Modeling (ODM) library.
-- **Cookie Parser** (`^1.4.7`): Middleware to parse cookies for auth tokens.
-- **Nodemon** (`^3.1.14`): Development utility to auto-restart the application.
-
-### Security & Authentication
-- **JSON Web Tokens (JWT)** (`^9.0.2`): Tokens for user sessions.
-- **Bcrypt** (`^6.0.0`): Hashing user passwords securely.
-
-### AI & Data Processing
-- **Google GenAI SDK** (`@google/genai` `^2.8.0`): SDK integration for Google Gemini models.
-- **Zod** (`^4.4.3`): Schema validation for input parsing and structured output.
-- **Zod to JSON Schema** (`^3.25.2`): Translates Zod schemas into JSON structures for Gemini configuration.
-- **PDF-Parse** (`^1.1.1`): Server-side library to read and parse PDF documents.
-- **Multer** (`^2.1.1`): Multipart form-data parser for processing file uploads in-memory.
+```mermaid
+graph TD
+    Client[React Client / Vite] -->|1. Uploads PDF or Selects Resume| Backend[Express Backend / Node.js]
+    Backend -->|2. Saves User / Resume / Quiz Results| Database[(MongoDB / Mongoose)]
+    Backend -->|3. Feeds Raw Parsing + Settings| Gemini[Google Gemini AI / Zod Validation]
+    Gemini -->|4. Tool Call Request| JobScraper[LinkedIn & Unstop Scraper Service]
+    JobScraper -->|5. Scraped Opportunity Feeds| Gemini
+    Gemini -->|6. Validated Structured JSON| Backend
+    Backend -->|7. API Response / HSL Dashboard render| Client
+```
 
 ---
 
-## 📁 Project Structure
+## ✨ Core Features
 
-The project directory consists of the following components:
+### 📁 Resume Portfolio & Profile Manager
+* **In-Memory PDF Parser**: Converts PDF uploads into raw text structures instantly.
+* **Resume Manager Collection**: Users can drag-and-drop multiple resumes to their profile.
+* **Dropdown Selection**: Generated reports can target stored profile resumes, eliminating redundant uploads.
+* **Resume Maintenance**: Full dashboard to view upload histories and delete files dynamically.
 
-- **Root files**:
-  - [README.md](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/README.md): Project overview and installation instructions.
-  - [.gitignore](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/.gitignore): Tells Git which files to ignore (such as `.env` and `node_modules`).
-- **[backend/](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend)**:
-  - [server.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/server.js): Starts the HTTP server listener on port 3000 and initializes the database connection.
-  - [index.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/index.js): Sets up Express middleware, loads routes, and exports the app.
-  - **[config/](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/config)**:
-    - [db.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/config/db.js): Handles connections to MongoDB.
-  - **[src/](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src)**:
-    - **[routes/](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/routes)**:
-      - [user.routes.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/routes/user.routes.js): User registration, login, logout, and self retrieval routes.
-      - [interview.routes.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/routes/interview.routes.js): PDF resume upload and AI analysis generation routes.
-      - [job.routes.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/routes/job.routes.js): Agentic job search endpoints.
-    - **[controllers/](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers)**:
-      - [user.controller.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/user.controller.js): Route handlers for auth operations. Contains [userRegisterController](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/user.controller.js#L6), [userloginController](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/user.controller.js#L31), [userLogoutController](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/user.controller.js#L67), and [getUserController](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/user.controller.js#L93).
-      - [interview.controller.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/interview.controller.js): Handler for uploading, generating, and retrieving reports. Contains [generateUserInterviewReport](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/interview.controller.js#L7) and [getUserInterviewReportsHistory](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/interview.controller.js#L46).
-      - [job.controller.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/job.controller.js): Handler for executing agentic job retrieval via [retrieveAgenticJobs](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/controllers/job.controller.js#L3).
-    - **[middlewares/](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/middlewares)**:
-      - [auth.middleware.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/middlewares/auth.middleware.js): Token checking and blacklisting check via [authUser](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/middlewares/auth.middleware.js#L4).
-      - [file.middleware.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/middlewares/file.middleware.js): Sets up [upload](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/middlewares/file.middleware.js#L3) via Multer memory storage.
-    - **[services/](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/services)**:
-      - [ai.services.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/services/ai.services.js): Core integration with Gemini API containing [generateInterviewReport](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/services/ai.services.js#L45) and [retrieveJobsAgentically](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/services/ai.services.js#L145).
-      - [job.service.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/services/job.service.js): Job scrapers for guest LinkedIn APIs and public Unstop opportunity search boards.
-    - **[models/](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/models)**:
-      - [user.models.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/models/user.models.js): MongoDB schema defining user credentials.
-      - [BlackList.model.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/models/BlackList.model.js): Token blacklist storage for logging out users.
-      - [interviewReportModel.js](file:///c:/Users/mibni/OneDrive/Desktop/GenAI-Resume/backend/src/models/interviewReportModel.js): Stores analysis results and scores.
+### 🎯 AI Coaching Reports & Prep Roadmaps
+* **Intelligent Match Score**: Instant alignment metrics (0-100%) against target job descriptions.
+* **Mock Interviews**: Returns 5-7 technical questions and 3-5 behavioral questions matching candidate-intent and answers.
+* **Adaptive Timelines**: Dynamic preparation timelines that scale from 7 up to 30+ days based on skill gaps.
+* **Learning Badges**: Clickable video resources (🎥 YouTube) and official reference pages (📄 documentation).
+
+### 🧠 Adaptive Interview Prep Quizzes
+* **Hybrid Scope Selectors**: Launch quizzes targeting either job description history or identified skill gaps.
+* **Custom Parameter Bounds**: Supports custom numeric input count (1-30 questions) and difficulty levels.
+* **MCQ Game Loop**: Interactive deck showing progress bars and immediate choice checkmarks.
+* **Detailed AI Explanations**: Explains the correct answer logic with Gemini-backed explanations.
+* **Performance Tracker**: Score logging and past quiz history persisted in MongoDB.
+
+### 💼 Agentic Job Discovery
+* **Scraper Tool Loops**: Uses Gemini function declarations to search LinkedIn and Unstop.
+* **AI Relevance Filter**: Discards unrelated profiles and filters jobs matching the search query.
+
+---
+
+## 📁 Repository Directory Structure
+
+```text
+├── backend/
+│   ├── config/              # MongoDB ODM connections
+│   ├── src/
+│   │   ├── controllers/     # Authentication, reports, resumes, and quiz logic
+│   │   ├── middlewares/     # JWT authentication guards and multer file handlers
+│   │   ├── models/          # Mongoose database schemas
+│   │   ├── routes/          # Mounted endpoints
+│   │   └── services/        # Gemini AI integrations & scraper methods
+│   ├── index.js             # Middleware configurations & routes binding
+│   └── server.js            # Node HTTP server listener
+└── frontend/
+    ├── src/
+    │   ├── components/      # UI components (Sidebar, Report Details)
+    │   ├── pages/           # Pages (Dashboard, Profile, Quiz, Search)
+    │   ├── utils/           # Client-side API fetch utilities
+    │   ├── App.jsx          # Route configurations
+    │   ├── index.css        # Core design system stylesheet
+    │   └── main.jsx         # App bootstrap anchor
+```
 
 ---
 
 ## ⚙️ Prerequisites & Environment Variables
 
-Make sure you have **Node.js** (v18+) and **MongoDB** installed on your system. 
-
-Before running the application, you must set up the environment variables. Create a file named `.env` in the `backend` directory:
+Create a file named `.env` in the `backend` directory:
 
 ```env
-# MongoDB Connection String (Local or Atlas)
-mongo_uri=mongodb://localhost:27017/genai-resume
+# MongoDB Connection URI (Local database or Atlas Cluster)
+mongo_uri=mongodb://localhost:27017/agentic-ai-resume
 
-# Google Gemini API key
+# Google Gemini API credential
 GOOGLE_GEMINI_API_KEY=your_gemini_api_key_here
 
-# JWT Secret key for authentication encryption
+# JWT Secret key for authentication token hashing
 jwt_secret=your_super_secret_jwt_key_here
 ```
 
@@ -96,219 +103,42 @@ jwt_secret=your_super_secret_jwt_key_here
 
 ## 🚀 Getting Started
 
-Follow these steps to run the application on your local system:
+Follow these steps to set up and run the application locally:
 
-### 1. Install Dependencies
-Open your terminal, navigate to the `backend` folder, and install node packages:
+### 1. Start the Backend API
+Navigate to the `backend` folder, install npm packages, and start the development server:
 ```bash
 cd backend
 npm install
+npm start
 ```
+*(The backend server will connect to MongoDB and start listening on port `3000`)*
 
-### 2. Run the Server
-- **Production Mode / Run Server**:
-  To start the server listener properly (which initializes the database connection and listens on port 3000), run:
-  ```bash
-  npm start
-  ```
-  *(This executes `nodemon server.js`)*
-
-- **Development Route Check**:
-  To verify `index.js` file structure during coding without opening port 3000:
-  ```bash
-  npm run dev
-  ```
-  *(This executes `nodemon index.js`)*
+### 2. Start the Frontend Client
+Open a new terminal window, navigate to the `frontend` folder, install npm packages, and launch Vite:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+*(The client application will start running on port `5173`)*
 
 ---
 
-## 🔌 API Documentation
+## 🔌 Core API Specifications
 
-### 🔑 Authentication Endpoints
-
-#### 1. Register User
-- **Route**: `POST /api/auth/register`
-- **Body (`application/json`)**:
-  ```json
-  {
-    "name": "John Doe",
-    "email": "johndoe@example.com",
-    "password": "securepassword"
-  }
-  ```
-- **Response (`201 Created`)**:
-  ```json
-  {
-    "user": {
-      "_id": "60d0fe4f5311236168a109a2",
-      "email": "johndoe@example.com",
-      "name": "John Doe"
-    }
-  }
-  ```
-
-#### 2. Login User
-- **Route**: `POST /api/auth/login`
-- **Body (`application/json`)**:
-  ```json
-  {
-    "email": "johndoe@example.com",
-    "password": "securepassword"
-  }
-  ```
-- **Response (`200 OK`)** (Sets a cookie named `token`):
-  ```json
-  {
-    "user": {
-      "_id": "60d0fe4f5311236168a109a2",
-      "email": "johndoe@example.com",
-      "name": "John Doe"
-    },
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  }
-  ```
-
-#### 3. Fetch User Profile
-- **Route**: `GET /api/auth/get-me`
-- **Headers**: Cookies must contain `token=<jwt_token>`
-- **Response (`200 OK`)**:
-  ```json
-  {
-    "message": "User details fetched successfully",
-    "user": {
-      "id": "60d0fe4f5311236168a109a2",
-      "email": "johndoe@example.com"
-    }
-  }
-  ```
-
-#### 4. Logout User
-- **Route**: `POST /api/auth/logout`
-- **Headers**: Cookie `token` or Authorization Bearer header
-- **Response (`200 OK`)**:
-  ```json
-  {
-    "status": "Success",
-    "message": "User Logout Successful"
-  }
-  ```
-
----
-
-### 📝 Interview Preparation Endpoints
-
-#### 1. Generate & Save Interview Report
-- **Route**: `POST /api/interview/`
-- **Headers**: Cookies must contain `token=<jwt_token>` (required)
-- **Body (`multipart/form-data`)**:
-  - `resume`: PDF resume file (required)
-  - `selfDescription`: String (optional)
-  - `jobDescription`: String (optional)
-- **Response (`201 Created`)** (Saves the report dynamically to MongoDB linked to the active user profile):
-  ```json
-  {
-    "status": "Successful",
-    "response": {
-      "_id": "60d0fe4f5311236168a109c4",
-      "title": "Software Engineer",
-      "matchScore": 85,
-      "technicalQuestions": [
-        {
-          "question": "What is...",
-          "intention": "To assess...",
-          "answer": "..."
-        }
-      ],
-      "behavioralQuestions": [
-        {
-          "question": "Tell me about...",
-          "intention": "To test...",
-          "answer": "..."
-        }
-      ],
-      "skillGaps": [
-        {
-          "skill": "System Design",
-          "severity": "medium"
-        }
-      ],
-      "preparationPlan": [
-        {
-          "day": 1,
-          "focus": "Algorithm Practice",
-          "tasks": ["Solve two graph theory challenges"]
-        }
-      ],
-      "user": "60d0fe4f5311236168a109a2",
-      "jobDescription": "General Profile Assessment",
-      "selfDescription": "",
-      "createdAt": "2026-06-08T11:30:00.000Z",
-      "updatedAt": "2026-06-08T11:30:00.000Z"
-    }
-  }
-  ```
-
-#### 2. Get User Report History
-- **Route**: `GET /api/interview/history`
-- **Headers**: Cookies must contain `token=<jwt_token>` (required)
-- **Response (`200 OK`)**:
-  ```json
-  {
-    "status": "Successful",
-    "reports": [
-      {
-        "_id": "60d0fe4f5311236168a109c4",
-        "title": "Software Engineer",
-        "matchScore": 85,
-        "technicalQuestions": [...],
-        "behavioralQuestions": [...],
-        "skillGaps": [...],
-        "preparationPlan": [...],
-        "user": "60d0fe4f5311236168a109a2",
-        "jobDescription": "General Profile Assessment",
-        "selfDescription": "",
-        "createdAt": "2026-06-08T11:30:00.000Z",
-        "updatedAt": "2026-06-08T11:30:00.000Z"
-      }
-    ]
-  }
-  ```
-
----
-
-### 💼 Job Discovery Endpoints
-
-#### 1. Search Jobs Agentically
-- **Route**: `POST /api/jobs/search`
-- **Headers**: Cookies must contain `token=<jwt_token>` (required)
-- **Body (`application/json`)**:
-  ```json
-  {
-    "jobRole": "React Developer"
-  }
-  ```
-- **Response (`200 OK`)** (Runs the `gemini-3-flash-preview` Agentic Loop, executing the public guest search scraper tool to retrieve real job listings):
-  ```json
-  {
-    "status": "Successful",
-    "response": {
-      "jobRole": "React Developer",
-      "jobs": [
-        {
-          "title": "React Frontend Engineer",
-          "company": "TechInnovations Inc.",
-          "location": "Bengaluru, Karnataka (Hybrid)",
-          "link": "https://www.linkedin.com/jobs/view/...",
-          "platform": "LinkedIn"
-        },
-        {
-          "title": "React Developer Intern",
-          "company": "Pioneer Learning Platforms",
-          "location": "New Delhi, India (On-site)",
-          "link": "https://unstop.com/o/...",
-          "platform": "Unstop"
-        }
-      ]
-    }
-  }
-  ```
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :--- |
+| **POST** | `/api/auth/register` | Registers a new user account | No |
+| **POST** | `/api/auth/login` | Authenticates user and sets token cookie | No |
+| **GET** | `/api/auth/get-me` | Validates session token and returns credentials | Yes |
+| **POST** | `/api/auth/logout` | Clears local cookie and blacklists token | Yes |
+| **POST** | `/api/interview/` | Generates a career report from parsed PDF upload | Yes |
+| **GET** | `/api/interview/history` | Fetches historical reports generated by user | Yes |
+| **GET** | `/api/resumeUpload/` | Lists metadata of user's stored resumes | Yes |
+| **POST** | `/api/resumeUpload/upload` | Uploads and saves a new resume to profile | Yes |
+| **DELETE**| `/api/resumeUpload/:id` | Deletes a stored resume from database | Yes |
+| **POST** | `/api/quiz/generate` | Generates custom multiple-choice quiz questions | Yes |
+| **POST** | `/api/quiz/submit` | Grades and saves the completed quiz score | Yes |
+| **GET** | `/api/quiz/history` | Retrieves the history of completed quizzes | Yes |
+| **POST** | `/api/jobs/search` | Scrapes public search opportunities agentically | Yes |

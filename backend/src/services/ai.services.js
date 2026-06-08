@@ -38,7 +38,14 @@ const interviewReportSchema = z.object({
     z.object({
       day: z.number(),
       focus: z.string(),
-      tasks: z.array(z.string())
+      tasks: z.array(z.string()),
+      resources: z.array(
+        z.object({
+          title: z.string(),
+          url: z.string(),
+          type: z.enum(["youtube", "official"])
+        })
+      )
     })
   )
 });
@@ -84,7 +91,14 @@ The JSON MUST EXACTLY follow this structure:
     {
       "day": 1,
       "focus": "string",
-      "tasks": ["string"]
+      "tasks": ["string"],
+      "resources": [
+        {
+          "title": "string",
+          "url": "string",
+          "type": "youtube"
+        }
+      ]
     }
   ]
 }
@@ -93,7 +107,8 @@ Requirements:
 - 5-7 technical questions
 - 3-5 behavioral questions
 - realistic skill gaps
-- 7 day preparation plan
+- preparationPlan must have a minimum of 7 days, but scale it dynamically based on the complexity and severity of the identified skillGaps (extending up to 14, 21, or 30+ days if severe gaps are found).
+- For each day in the preparationPlan, you MUST include a 'resources' array containing 1-2 highly specific learning resources. Each resource should have a descriptive title, a valid URL (use real search URLs like 'https://www.youtube.com/results?search_query=...' or official documentation URLs like 'https://react.dev/'), and a 'type' of either 'youtube' or 'official'.
 - title should be the job title
 Resume:
 ${resume}
@@ -306,7 +321,82 @@ Format the relevant jobs into a valid JSON object matching this schema:
   }
 }
 
+const aiQuizSchema = z.object({
+  title: z.string(),
+  questions: z.array(
+    z.object({
+      question: z.string(),
+      options: z.array(z.string()).length(4),
+      correctAnswer: z.string(),
+      explanation: z.string()
+    })
+  )
+});
+
+async function generateQuizAgentically({ mode, skills, jobTitle, numQuestions, difficulty }) {
+  try {
+    const scope = mode === 'jd' 
+      ? `Job Description / Title: "${jobTitle}"`
+      : `Target Skills: "${skills.join(', ')}"`;
+
+    const prompt = `
+You are an expert technical interviewer.
+
+Generate a multiple-choice quiz based on:
+${scope}
+
+Difficulty Level: ${difficulty}
+Number of Questions: ${numQuestions}
+
+Return ONLY valid JSON matching this schema:
+{
+  "title": "string (descriptive title of the quiz)",
+  "questions": [
+    {
+      "question": "string (the question text)",
+      "options": [
+        "string (Option A)",
+        "string (Option B)",
+        "string (Option C)",
+        "string (Option D)"
+      ],
+      "correctAnswer": "string (MUST EXACTLY match one of the four options above)",
+      "explanation": "string (detailed explanation of why this option is correct)"
+    }
+  ]
+}
+
+Requirements:
+- Generate exactly ${numQuestions} questions.
+- Every question must have exactly 4 choices in the 'options' array.
+- The 'correctAnswer' must be a exact string match of one of the options.
+- Target difficulty: ${difficulty}. Easy should test basic definitions/use-cases; Medium should test practical coding/scenario-based tasks; Hard should test deep architecture, troubleshooting, and edge cases.
+- Do NOT generate unrelated or static generic trivia questions. Make them highly dynamic and specific to the requested scope: ${scope}.
+`;
+
+    const response = await generateContentWithFallback({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json"
+      }
+    });
+
+    console.log("Quiz Raw AI Response:", response.text);
+    const parsed = JSON.parse(response.text);
+    const validated = aiQuizSchema.parse(parsed);
+    return validated;
+  } catch (error) {
+    console.error("Quiz Generation AI Error:", error);
+    if (error instanceof z.ZodError) {
+      console.error("Zod Schema Validation Error in Quiz:", error.issues);
+    }
+    throw error;
+  }
+}
+
 module.exports = {
   generateInterviewReport,
-  retrieveJobsAgentically
+  retrieveJobsAgentically,
+  generateQuizAgentically
 };

@@ -143,6 +143,24 @@ export default function ReportDetails({ report }) {
                         <li key={tIndex}>{task}</li>
                       ))}
                     </ul>
+                    {plan.resources && plan.resources.length > 0 && (
+                      <div className="timeline-resources">
+                        <span className="resources-lbl">Recommended Learning:</span>
+                        <div className="resources-list">
+                          {plan.resources.map((res, rIndex) => (
+                            <a 
+                              key={rIndex} 
+                              href={res.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className={`resource-tag ${res.type}`}
+                            >
+                              {res.type === 'youtube' ? '🎥' : '📄'} {res.title}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

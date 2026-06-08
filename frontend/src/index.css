@@ -856,6 +856,61 @@ button {
   color: hsl(var(--primary));
 }
 
+.timeline-resources {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.resources-lbl {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: hsl(var(--text-muted));
+  letter-spacing: 0.05em;
+}
+
+.resources-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.resource-tag {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.resource-tag.youtube {
+  background-color: #ffebeb;
+  color: #cc0000;
+  border: 1px solid #ffcccc;
+}
+
+.resource-tag.youtube:hover {
+  background-color: #ffd6d6;
+  transform: translateY(-1px);
+}
+
+.resource-tag.official {
+  background-color: hsl(var(--primary-light));
+  color: hsl(var(--primary));
+  border: 1px solid hsla(var(--primary), 0.15);
+}
+
+.resource-tag.official:hover {
+  background-color: hsla(var(--primary), 0.15);
+  transform: translateY(-1px);
+}
+
 .qa-section {
   margin-top: 24px;
 }
@@ -1282,6 +1337,676 @@ textarea {
   padding: 10px;
   text-decoration: none;
   font-size: 14px;
+}
+
+/* Profile Page & Resume Manager */
+.profile-page {
+  animation: fadeIn 0.4s ease;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 32px;
+}
+
+.profile-user-card {
+  padding: 24px;
+}
+
+.profile-user-card h3, .resumes-manager-card h3 {
+  font-size: 20px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid hsl(var(--border-color));
+  padding-bottom: 12px;
+}
+
+.user-details-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.user-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  background-color: hsl(var(--bg-app));
+  border-radius: var(--radius-sm);
+  border: 1px solid hsl(var(--border-color));
+}
+
+.detail-icon {
+  color: hsl(var(--primary));
+  flex-shrink: 0;
+}
+
+.detail-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-lbl {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: hsl(var(--text-muted));
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.detail-val {
+  font-size: 14px;
+  font-weight: 600;
+  color: hsl(var(--text-main));
+}
+
+.resumes-manager-card {
+  padding: 24px;
+}
+
+.profile-resumes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 32px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.profile-resume-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  border: 1px solid hsl(var(--border-color));
+  background-color: hsl(var(--bg-app));
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.profile-resume-row:hover {
+  border-color: hsl(var(--primary) / 0.3);
+  transform: translateX(2px);
+}
+
+.resume-row-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.resume-row-left .file-icon {
+  color: hsl(var(--primary));
+  flex-shrink: 0;
+}
+
+.resume-meta-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.resume-name-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: hsl(var(--text-main));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resume-date-stamp {
+  font-size: 12px;
+  color: hsl(var(--text-muted));
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.delete-resume-btn {
+  background-color: transparent;
+  color: hsl(var(--text-muted));
+  padding: 8px;
+  border-radius: var(--radius-sm);
+}
+
+.delete-resume-btn:hover {
+  background-color: hsl(var(--danger-light));
+  color: hsl(var(--danger));
+}
+
+.profile-uploader-section {
+  border-top: 1px solid hsl(var(--border-color));
+  padding-top: 24px;
+}
+
+.profile-dropzone {
+  height: 160px;
+  margin-top: 12px;
+}
+
+.no-resumes-msg {
+  color: hsl(var(--text-muted));
+  font-size: 14px;
+  margin-bottom: 32px;
+  text-align: center;
+  padding: 24px;
+  background-color: hsl(var(--bg-app));
+  border-radius: var(--radius-sm);
+  border: 1px dashed hsl(var(--border-color));
+}
+
+/* Dropdown Selector inside ResumeUpload page */
+.loading-dropdown-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background-color: hsl(var(--bg-app));
+  border: 1px solid hsl(var(--border-color));
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: hsl(var(--text-muted));
+}
+
+.resume-selector-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.resume-dropdown-select {
+  width: 100%;
+  padding: 12px 16px;
+  background-color: hsl(var(--bg-card));
+  border: 1px solid hsl(var(--border-color));
+  border-radius: var(--radius-sm);
+  color: hsl(var(--text-main));
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23718096%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
+  padding-right: 40px;
+}
+
+.resume-dropdown-select:focus {
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 3px hsla(var(--primary), 0.15);
+}
+
+.saved-resume-selected-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  border-color: hsla(var(--primary), 0.15);
+  background-color: hsl(var(--primary-light) / 0.2);
+  box-shadow: none;
+  border: 1px solid hsla(var(--primary), 0.15);
+  border-radius: var(--radius-md);
+}
+
+.saved-resume-selected-card .folder-icon {
+  color: hsl(var(--primary));
+  flex-shrink: 0;
+}
+
+.selected-info h4 {
+  font-size: 15px;
+  margin-bottom: 2px;
+}
+
+.selected-info p {
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.profile-edit-lnk {
+  font-size: 13px;
+  color: hsl(var(--primary));
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.profile-edit-lnk:hover {
+  text-decoration: underline;
+}
+
+/* Quiz Pages styling */
+.quiz-setup-card {
+  padding: 24px;
+}
+
+.quiz-setup-card h3, .quiz-history-card h3 {
+  font-size: 20px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid hsl(var(--border-color));
+  padding-bottom: 12px;
+}
+
+.mode-toggle-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.mode-btn {
+  flex: 1;
+  font-weight: 600;
+  padding: 10px;
+}
+
+.mode-btn.active-mode {
+  background-color: hsl(var(--primary));
+  color: white;
+  border-color: hsl(var(--primary));
+  box-shadow: 0 4px 10px hsla(var(--primary), 0.15);
+}
+
+.no-history-warning {
+  padding: 12px 16px;
+  background-color: hsl(var(--warning-light));
+  border: 1px solid hsla(var(--warning), 0.2);
+  color: hsl(var(--warning));
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.skills-checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  max-height: 160px;
+  overflow-y: auto;
+  border: 1px solid hsl(var(--border-color));
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  background-color: hsl(var(--bg-app));
+}
+
+.skill-chk-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  color: hsl(var(--text-main));
+}
+
+.skill-chk-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.add-custom-skill-row {
+  display: flex;
+  gap: 8px;
+}
+
+.add-custom-skill-row input {
+  flex: 1;
+}
+
+.quiz-history-card {
+  padding: 24px;
+}
+
+.quiz-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.quiz-history-row-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border: 1px solid hsl(var(--border-color));
+  background-color: hsl(var(--bg-app));
+  border-radius: var(--radius-sm);
+}
+
+.quiz-hist-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.award-icon {
+  flex-shrink: 0;
+}
+
+.quiz-hist-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.quiz-hist-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: hsl(var(--text-main));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quiz-hist-diff {
+  font-size: 12px;
+  color: hsl(var(--text-muted));
+}
+
+.quiz-hist-score {
+  font-size: 18px;
+  font-weight: 800;
+  font-family: var(--font-heading);
+}
+
+/* Active Quiz Play styling */
+.quiz-play-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.quiz-progress-bar-card {
+  padding: 20px;
+}
+
+.quiz-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: hsl(var(--text-muted));
+  margin-bottom: 12px;
+}
+
+.difficulty-badge {
+  background-color: hsl(var(--primary-light));
+  color: hsl(var(--primary));
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.progress-track-bar {
+  width: 100%;
+  height: 8px;
+  background-color: hsl(var(--border-color));
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill-bar {
+  height: 100%;
+  background-color: hsl(var(--primary));
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.active-question-card {
+  padding: 32px;
+}
+
+.question-prompt-header {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.question-prompt-header .q-icon {
+  color: hsl(var(--primary));
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.question-prompt-header h3 {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.quiz-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quiz-option-row-btn {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  width: 100%;
+  text-align: left;
+  background-color: hsl(var(--bg-app));
+  border: 1px solid hsl(var(--border-color));
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.quiz-option-row-btn:hover {
+  border-color: hsl(var(--primary) / 0.4);
+  background-color: hsl(var(--primary-light) / 0.2);
+}
+
+.quiz-option-row-btn.selected {
+  border-color: hsl(var(--primary));
+  background-color: hsl(var(--primary-light));
+  box-shadow: 0 4px 10px hsla(var(--primary), 0.1);
+}
+
+.option-letter {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: hsl(var(--bg-card));
+  border: 1px solid hsl(var(--border-color));
+  color: hsl(var(--text-main));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.quiz-option-row-btn.selected .option-letter {
+  background-color: hsl(var(--primary));
+  color: white;
+  border-color: hsl(var(--primary));
+}
+
+.option-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: hsl(var(--text-main));
+  line-height: 1.4;
+}
+
+.quiz-nav-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+/* Quiz Results styling */
+.quiz-results-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.results-summary-card {
+  padding: 32px;
+}
+
+.score-ring-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.results-score-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.trophy-icon {
+  margin-bottom: 4px;
+}
+
+.results-score-info h3 {
+  font-size: 20px;
+}
+
+.results-score-info p {
+  font-size: 14px;
+  color: hsl(var(--text-muted));
+  line-height: 1.5;
+}
+
+.results-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.result-question-card {
+  padding: 24px;
+}
+
+.result-question-card.correct-border {
+  border-left: 5px solid hsl(var(--success));
+}
+
+.result-question-card.incorrect-border {
+  border-left: 5px solid hsl(var(--danger));
+}
+
+.result-q-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.result-q-header h4 {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.correct-icon {
+  color: hsl(var(--success));
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.incorrect-icon {
+  color: hsl(var(--danger));
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.result-options-list-review {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.result-option-row-review {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background-color: hsl(var(--bg-app));
+  border: 1px solid hsl(var(--border-color));
+  border-radius: var(--radius-sm);
+}
+
+.result-option-row-review.correct-choice {
+  background-color: hsl(var(--success-light));
+  border-color: hsla(var(--success), 0.2);
+}
+
+.result-option-row-review.incorrect-choice {
+  background-color: hsl(var(--danger-light));
+  border-color: hsla(var(--danger), 0.2);
+}
+
+.answer-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: auto;
+}
+
+.answer-badge.correct {
+  background-color: hsl(var(--success));
+  color: white;
+}
+
+.answer-badge.incorrect {
+  background-color: hsl(var(--danger));
+  color: white;
+}
+
+.ai-explanation-box {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background-color: hsla(280, 80%, 97%, 1);
+  border: 1px solid hsla(280, 80%, 90%, 1);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.ai-explanation-box .brain-icon {
+  color: hsla(280, 80%, 45%, 1);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.explanation-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.explanation-content strong {
+  color: hsla(280, 80%, 35%, 1);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
 }
 
 /* Responsive breakdowns */

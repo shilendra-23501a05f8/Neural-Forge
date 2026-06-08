@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { api } from '../utils/api';
-import { LayoutDashboard, FileText, Briefcase, LogOut, User } from 'lucide-react';
+import { LayoutDashboard, FileText, Briefcase, LogOut, User, ClipboardList } from 'lucide-react';
 
 export default function Sidebar({ user, onLogoutSuccess }) {
   const navigate = useNavigate();
@@ -57,6 +57,20 @@ export default function Sidebar({ user, onLogoutSuccess }) {
         >
           <Briefcase size={20} />
           <span>Job Search</span>
+        </NavLink>
+        <NavLink 
+          to="/profile" 
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+        >
+          <User size={20} />
+          <span>Profile</span>
+        </NavLink>
+        <NavLink 
+          to="/quiz" 
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+        >
+          <ClipboardList size={20} />
+          <span>Interview Quiz</span>
         </NavLink>
       </nav>
 

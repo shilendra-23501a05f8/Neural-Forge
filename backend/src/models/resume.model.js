@@ -6,6 +6,10 @@ const resumeSchema=new mongoose.Schema(
         type:String,
         required:[true,"The resume should be given"]
       },
+      filename:{
+        type:String,
+        default:"Resume.pdf"
+      },
       user:{
         type: mongoose.Schema.Types.ObjectId,
         ref: "users"

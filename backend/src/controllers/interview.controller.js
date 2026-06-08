@@ -3,34 +3,47 @@ const path = require('path');
 const upload = require("../middlewares/file.middleware").upload
 const aiService = require("../services/ai.services")
 const interviewReportModel = require("../models/interviewReportModel")
+const { resumeModel } = require("../models/resume.model")
 
 async function generateUserInterviewReport(req, res) {
   try {
-    const resume = req.file;
+    const { selfDescription, jobDescription, resumeId } = req.body;
+    const userId = req.user ? (req.user.userId || req.user.id) : null;
+    let resumeText = "";
 
-    if (!resume) {
-      return res.status(400).json({
-        message: "Resume file is required"
-      });
-    }
-
-    const { selfDescription, jobDescription } = req.body;
-
-    let pdfData;
-    try {
-      pdfData = await pdfParse(resume.buffer);
-    } catch (parseError) {
-      console.error("PDF Parse Error:", parseError);
-      return res.status(400).json({
-        status: "Failed",
-        message: "Failed to parse PDF resume. Please ensure the file is a valid, unencrypted PDF document."
-      });
+    if (resumeId) {
+      const storedResume = await resumeModel.findById(resumeId);
+      if (!storedResume || storedResume.user.toString() !== userId.toString()) {
+        return res.status(404).json({
+          status: "Failed",
+          message: "Selected resume not found or unauthorized."
+        });
+      }
+      resumeText = storedResume.resume;
+    } else {
+      const resume = req.file;
+      if (!resume) {
+        return res.status(400).json({
+          message: "Resume file or resumeId is required"
+        });
+      }
+      let pdfData;
+      try {
+        pdfData = await pdfParse(resume.buffer);
+        resumeText = pdfData.text;
+      } catch (parseError) {
+        console.error("PDF Parse Error:", parseError);
+        return res.status(400).json({
+          status: "Failed",
+          message: "Failed to parse PDF resume. Please ensure the file is a valid, unencrypted PDF document."
+        });
+      }
     }
 
     let response;
     try {
       response = await aiService.generateInterviewReport({
-        resume: pdfData.text,
+        resume: resumeText,
         jobDescription: jobDescription || "General Profile Assessment",
         selfDescription: selfDescription || ""
       });
@@ -42,11 +55,9 @@ async function generateUserInterviewReport(req, res) {
       });
     }
 
-    const userId = req.user ? (req.user.userId || req.user.id) : null;
-
     const savedReport = await interviewReportModel.create({
       jobDescription: jobDescription || "General Profile Assessment",
-      resume: pdfData.text,
+      resume: resumeText,
       selfDescription: selfDescription || "",
       matchScore: response.matchScore,
       technicalQuestions: response.technicalQuestions,

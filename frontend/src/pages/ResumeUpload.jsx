@@ -1,9 +1,15 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../utils/api';
 import ReportDetails from '../components/ReportDetails';
-import { Upload, FileText, AlertCircle, RefreshCw, CheckCircle, Info, Sparkles } from 'lucide-react';
+import { Upload, FileText, AlertCircle, RefreshCw, CheckCircle, Info, Sparkles, FolderOpen } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function ResumeUpload() {
+  const [savedResumes, setSavedResumes] = useState([]);
+  const [resumesLoading, setResumesLoading] = useState(true);
+  const [resumeSource, setResumeSource] = useState('saved'); // 'saved' or 'upload'
+  const [selectedResumeId, setSelectedResumeId] = useState('');
+
   const [file, setFile] = useState(null);
   const [jobDescription, setJobDescription] = useState('');
   const [selfDescription, setSelfDescription] = useState('');
@@ -13,6 +19,29 @@ export default function ResumeUpload() {
   
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Fetch saved resumes list on mount
+  useEffect(() => {
+    const fetchResumesList = async () => {
+      try {
+        const data = await api.get('/api/resumeUpload/');
+        const list = data.resumes || [];
+        setSavedResumes(list);
+        if (list.length > 0) {
+          setSelectedResumeId(list[0]._id);
+          setResumeSource('saved');
+        } else {
+          setResumeSource('upload');
+        }
+      } catch (err) {
+        console.error("Failed to load saved resumes:", err);
+        setResumeSource('upload');
+      } finally {
+        setResumesLoading(false);
+      }
+    };
+    fetchResumesList();
+  }, []);
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -42,7 +71,6 @@ export default function ResumeUpload() {
       setFile(null);
       return;
     }
-    // Limit to 10MB
     if (selectedFile.size > 10 * 1024 * 1024) {
       setError('File size must be under 10MB.');
       setFile(null);
@@ -63,7 +91,12 @@ export default function ResumeUpload() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file) {
+    
+    if (resumeSource === 'saved' && !selectedResumeId) {
+      setError('Please select a saved resume from the dropdown.');
+      return;
+    }
+    if (resumeSource === 'upload' && !file) {
       setError('Please select or drop a resume PDF file.');
       return;
     }
@@ -72,14 +105,21 @@ export default function ResumeUpload() {
     setError('');
     setResult(null);
 
-    const formData = new FormData();
-    formData.append('resume', file);
-    formData.append('jobDescription', jobDescription);
-    formData.append('selfDescription', selfDescription);
-
     try {
-      // Endpoint POST /api/interview/
-      const data = await api.upload('/api/interview/', formData);
+      let data;
+      if (resumeSource === 'saved') {
+        data = await api.post('/api/interview/', {
+          resumeId: selectedResumeId,
+          jobDescription,
+          selfDescription
+        });
+      } else {
+        const formData = new FormData();
+        formData.append('resume', file);
+        formData.append('jobDescription', jobDescription);
+        formData.append('selfDescription', selfDescription);
+        data = await api.upload('/api/interview/', formData);
+      }
       setResult(data.response);
     } catch (err) {
       console.error('Analysis failed:', err);
@@ -96,6 +136,29 @@ export default function ResumeUpload() {
     setResult(null);
     setError('');
     if (fileInputRef.current) fileInputRef.current.value = '';
+    
+    // Refresh saved resumes in case they uploaded another in Profile
+    setResumesLoading(true);
+    api.get('/api/resumeUpload/')
+      .then(data => {
+        const list = data.resumes || [];
+        setSavedResumes(list);
+        if (list.length > 0) {
+          setSelectedResumeId(list[0]._id);
+          setResumeSource('saved');
+        } else {
+          setResumeSource('upload');
+        }
+      })
+      .catch(err => console.error(err))
+      .finally(() => setResumesLoading(false));
+  };
+
+  const isSubmitDisabled = () => {
+    if (!jobDescription) return true;
+    if (resumeSource === 'saved' && !selectedResumeId) return true;
+    if (resumeSource === 'upload' && !file) return true;
+    return false;
   };
 
   if (result) {
@@ -155,49 +218,95 @@ export default function ResumeUpload() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="upload-form-grid">
-          {/* File Upload Zone */}
+          {/* Resume Selector & Upload Zone */}
           <div className="form-column">
             <div className="form-group">
-              <label className="section-label">Resume PDF File *</label>
-              <div 
-                className={`dropzone-card card ${isDragOver ? 'dragover' : ''} ${file ? 'has-file' : ''}`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onClick={!file ? triggerFileSelect : undefined}
-              >
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange} 
-                  accept=".pdf" 
-                  style={{ display: 'none' }}
-                />
-                
-                {file ? (
-                  <div className="file-info-container">
-                    <FileText size={48} className="file-icon-color" />
-                    <div className="file-meta">
-                      <p className="file-name">{file.name}</p>
-                      <p className="file-size">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                    </div>
-                    <button type="button" className="btn-secondary remove-file-btn" onClick={removeFile}>
-                      Remove File
-                    </button>
-                  </div>
-                ) : (
-                  <div className="dropzone-prompt">
-                    <Upload size={48} className="upload-icon-color" />
-                    <h3>Drag & Drop Resume PDF</h3>
-                    <p>or click to browse local files (max 10MB)</p>
-                  </div>
-                )}
-              </div>
+              <label className="section-label">Resume Selector *</label>
+              <span className="input-hint">Select a saved resume from your profile or upload a new file</span>
+              
+              {resumesLoading ? (
+                <div className="loading-dropdown-box">
+                  <RefreshCw className="spinner" size={16} />
+                  <span>Loading your resumes...</span>
+                </div>
+              ) : (
+                <div className="resume-selector-wrapper">
+                  <select
+                    className="resume-dropdown-select"
+                    value={resumeSource === 'upload' ? 'upload' : selectedResumeId}
+                    onChange={(e) => {
+                      if (e.target.value === 'upload') {
+                        setResumeSource('upload');
+                        setSelectedResumeId('');
+                      } else {
+                        setResumeSource('saved');
+                        setSelectedResumeId(e.target.value);
+                      }
+                    }}
+                  >
+                    {savedResumes.map(r => (
+                      <option key={r._id} value={r._id}>
+                        💾 {r.filename}
+                      </option>
+                    ))}
+                    <option value="upload">➕ Upload a new resume...</option>
+                  </select>
+                </div>
+              )}
             </div>
+
+            {resumeSource === 'upload' ? (
+              <div className="form-group">
+                <label className="section-label">Upload PDF *</label>
+                <div 
+                  className={`dropzone-card card ${isDragOver ? 'dragover' : ''} ${file ? 'has-file' : ''}`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={!file ? triggerFileSelect : undefined}
+                >
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handleFileChange} 
+                    accept=".pdf" 
+                    style={{ display: 'none' }}
+                  />
+                  
+                  {file ? (
+                    <div className="file-info-container">
+                      <FileText size={48} className="file-icon-color" />
+                      <div className="file-meta">
+                        <p className="file-name">{file.name}</p>
+                        <p className="file-size">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                      </div>
+                      <button type="button" className="btn-secondary remove-file-btn" onClick={removeFile}>
+                        Remove File
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="dropzone-prompt">
+                      <Upload size={48} className="upload-icon-color" />
+                      <h3>Drag & Drop Resume PDF</h3>
+                      <p>or click to browse local files (max 10MB)</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="saved-resume-selected-card card animate-fade-in">
+                <FolderOpen size={32} className="folder-icon" />
+                <div className="selected-info">
+                  <h4>Saved Resume Selected</h4>
+                  <p className="text-muted">Using stored resume data from your Profile. No upload required.</p>
+                  <Link to="/profile" className="profile-edit-lnk">Manage your Resumes →</Link>
+                </div>
+              </div>
+            )}
 
             <div className="info-helper-box">
               <Info size={16} />
-              <p>For best results, upload resumes that are single-column formatted and fully typed (avoid scanned image-only PDFs).</p>
+              <p>For best results, upload resumes that are single-column formatted and fully typed.</p>
             </div>
           </div>
 
@@ -209,7 +318,7 @@ export default function ResumeUpload() {
               <textarea
                 id="jobDescription"
                 rows={5}
-                placeholder="Example: Software Engineer - React, Node.js, and MongoDB. Must have experience building secure REST APIs and frontend routers..."
+                placeholder="Example: Software Engineer - React, Node.js, and MongoDB. Must have experience building secure REST APIs..."
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
                 required
@@ -222,13 +331,13 @@ export default function ResumeUpload() {
               <textarea
                 id="selfDescription"
                 rows={4}
-                placeholder="Example: I am a self-taught full-stack developer with 1 year of freelance experience. Looking to break into junior backend engineering. I have deep interest in microservices."
+                placeholder="Example: I am a self-taught developer with 1 year experience..."
                 value={selfDescription}
                 onChange={(e) => setSelfDescription(e.target.value)}
               />
             </div>
 
-            <button type="submit" className="btn-primary start-analysis-btn" disabled={!file || !jobDescription}>
+            <button type="submit" className="btn-primary start-analysis-btn" disabled={isSubmitDisabled() || loading}>
               Analyze Resume & Build Prep Roadmap
             </button>
           </div>
