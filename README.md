@@ -142,3 +142,4 @@ npm run dev
 | **POST** | `/api/quiz/submit` | Grades and saves the completed quiz score | Yes |
 | **GET** | `/api/quiz/history` | Retrieves the history of completed quizzes | Yes |
 | **POST** | `/api/jobs/search` | Scrapes public search opportunities agentically | Yes |
+
