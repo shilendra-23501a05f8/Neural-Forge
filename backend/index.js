@@ -9,6 +9,7 @@ const interviewRouter = require("./src/routes/interview.routes");
 const resumeUploadRouter = require("./src/routes/resumeUpload.routes");
 const jobRouter = require("./src/routes/job.routes");
 const quizRouter = require("./src/routes/quiz.routes");
+const mockInterviewRouter = require("./src/routes/mockInterview.routes");
 
 app.use(cors({
   origin: true,
@@ -24,6 +25,7 @@ app.use("/api/interview/",interviewRouter);
 app.use("/api/resumeUpload/",resumeUploadRouter);
 app.use("/api/jobs/",jobRouter);
 app.use("/api/quiz/", quizRouter);
+app.use("/api/mock-interview/", mockInterviewRouter);
 
 
 module.exports = app;

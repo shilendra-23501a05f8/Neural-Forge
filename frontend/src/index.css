@@ -2047,3 +2047,84 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================
+   PRINT MEDIA STYLES: PDF GENERATION
+   ========================================== */
+@media print {
+  /* Hide interactive / non-report elements */
+  nav,
+  header,
+  footer,
+  aside,
+  .sidebar,
+  .sidebar-container,
+  button,
+  .btn-primary,
+  .btn-secondary,
+  .no-print,
+  .dashboard-header button,
+  .history-section h3,
+  .reports-history-list .card > div:first-child svg {
+    display: none !important;
+  }
+
+  /* Reset main layout offset for print margins */
+  body,
+  .main-content,
+  .dashboard-page,
+  #printable-report {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 13px !important;
+  }
+
+  /* Target report elements specifically */
+  #printable-report {
+    visibility: visible !important;
+    display: block !important;
+    position: relative !important;
+  }
+
+  #printable-report * {
+    visibility: visible !important;
+  }
+
+  /* Re-enable and format grids to print in multi-column list */
+  .analytics-grid,
+  .report-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 20px !important;
+    margin-bottom: 24px !important;
+  }
+
+  .card {
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border-radius: 8px !important;
+    padding: 18px !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Expand all accordion transcript details for complete Q&A visibility */
+  .reports-history-list .card .history-details-panel {
+    display: block !important;
+    opacity: 1 !important;
+    border-top: 1px solid #e2e8f0 !important;
+    margin-top: 15px !important;
+    padding-top: 15px !important;
+  }
+
+  /* Force browsers to print layout colors */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
