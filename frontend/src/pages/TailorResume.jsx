@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../utils/api';
-import { Upload, FileText, AlertCircle, RefreshCw, CheckCircle, Info, Sparkles, FolderOpen, Printer } from 'lucide-react';
+import { Upload, FileText, AlertCircle, RefreshCw, CheckCircle, Info, Sparkles, FolderOpen, Printer, Download, Edit3, Save, LayoutTemplate, Briefcase, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import TemplateRenderer from '../components/templates/TemplateRenderer';
+import ResumeEditor from '../components/ResumeEditor';
+import { exportToDocx } from '../utils/docxExport';
 
 export default function TailorResume() {
   const [savedResumes, setSavedResumes] = useState([]);
@@ -12,13 +15,26 @@ export default function TailorResume() {
   const [file, setFile] = useState(null);
   const [jobDescription, setJobDescription] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
+  const [selectedTemplate, setSelectedTemplate] = useState('modern');
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState('');
+  const [resumeName, setResumeName] = useState('');
   
   const [isDragOver, setIsDragOver] = useState(false);
+  
+  const templates = [
+    { id: 'modern', name: 'Modern Professional', desc: 'Clean layout, ideal for tech roles' },
+    { id: 'corporate', name: 'Corporate', desc: 'Traditional business style, ATS-friendly' },
+    { id: 'minimal', name: 'Minimal', desc: 'Simple black-and-white, max spacing' },
+    { id: 'creative', name: 'Creative', desc: 'Modern visual design, highlight sections' },
+    { id: 'student', name: 'Student / Fresher', desc: 'Prioritizes education and projects' }
+  ];
   const fileInputRef = useRef(null);
 
-  // Fetch saved resumes list on mount
   useEffect(() => {
     const fetchResumesList = async () => {
       try {
@@ -41,27 +57,46 @@ export default function TailorResume() {
     fetchResumesList();
   }, []);
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragOver(true);
+  useEffect(() => {
+    let interval;
+    if (loading) {
+      setLoadingStep(0);
+      interval = setInterval(() => {
+        setLoadingStep(prev => (prev < 4 ? prev + 1 : prev));
+      }, 3500);
+    }
+    return () => clearInterval(interval);
+  }, [loading]);
+
+  const loadingMessages = [
+    "Analyzing Base Resume...",
+    "Extracting Job Description Keywords...",
+    "Aligning Experience and Skills...",
+    "Optimizing for ATS Formatting...",
+    "Rendering Final Output..."
+  ];
+
+  const extractJobTitle = (jd) => {
+    if (!jd) return 'Tailored_Resume';
+    const match = jd.match(/(?:job title|role|position)[\s:]*([a-zA-Z0-9\s-]+)/i);
+    let titleStr = '';
+    if (match && match[1]) {
+      titleStr = match[1].trim();
+    } else {
+      titleStr = jd.split('\n')[0].trim().split(/\s+/).slice(0, 4).join(' ');
+    }
+    return (titleStr.replace(/[^a-zA-Z0-9\s-]/g, '').trim().replace(/\s+/g, '_') + '_Resume').replace(/^_+|_+$/g, '');
   };
 
-  const handleDragLeave = () => {
-    setIsDragOver(false);
-  };
-
+  // Drag and drop handlers...
+  const handleDragOver = (e) => { e.preventDefault(); setIsDragOver(true); };
+  const handleDragLeave = () => { setIsDragOver(false); };
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragOver(false);
-    const droppedFile = e.dataTransfer.files[0];
-    validateAndSetFile(droppedFile);
+    validateAndSetFile(e.dataTransfer.files[0]);
   };
-
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    validateAndSetFile(selectedFile);
-  };
-
+  const handleFileChange = (e) => validateAndSetFile(e.target.files[0]);
   const validateAndSetFile = (selectedFile) => {
     if (!selectedFile) return;
     if (selectedFile.type !== 'application/pdf') {
@@ -77,27 +112,13 @@ export default function TailorResume() {
     setError('');
     setFile(selectedFile);
   };
-
-  const triggerFileSelect = () => {
-    fileInputRef.current.click();
-  };
-
-  const removeFile = () => {
-    setFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
+  const triggerFileSelect = () => fileInputRef.current.click();
+  const removeFile = () => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (resumeSource === 'saved' && !selectedResumeId) {
-      setError('Please select a saved resume from the dropdown.');
-      return;
-    }
-    if (resumeSource === 'upload' && !file) {
-      setError('Please select or drop a resume PDF file.');
-      return;
-    }
+    if (resumeSource === 'saved' && !selectedResumeId) return setError('Please select a saved resume.');
+    if (resumeSource === 'upload' && !file) return setError('Please upload a resume PDF file.');
 
     setLoading(true);
     setError('');
@@ -106,10 +127,7 @@ export default function TailorResume() {
     try {
       let data;
       if (resumeSource === 'saved') {
-        data = await api.post('/api/tailor/', {
-          resumeId: selectedResumeId,
-          jobDescription
-        });
+        data = await api.post('/api/tailor/', { resumeId: selectedResumeId, jobDescription });
       } else {
         const formData = new FormData();
         formData.append('resume', file);
@@ -117,9 +135,9 @@ export default function TailorResume() {
         data = await api.upload('/api/tailor/', formData);
       }
       setResult(data.response);
+      setResumeName(extractJobTitle(jobDescription));
     } catch (err) {
-      console.error('Tailoring failed:', err);
-      setError(err.message || 'An error occurred during resume tailoring. Please try again.');
+      setError(err.message || 'An error occurred during resume tailoring.');
     } finally {
       setLoading(false);
     }
@@ -130,6 +148,8 @@ export default function TailorResume() {
     setJobDescription('');
     setResult(null);
     setError('');
+    setIsEditing(false);
+    setResumeName('');
     if (fileInputRef.current) fileInputRef.current.value = '';
     
     setResumesLoading(true);
@@ -144,220 +164,277 @@ export default function TailorResume() {
           setResumeSource('upload');
         }
       })
-      .catch(err => console.error(err))
+      .catch(console.error)
       .finally(() => setResumesLoading(false));
   };
 
-  const isSubmitDisabled = () => {
-    if (!jobDescription) return true;
-    if (resumeSource === 'saved' && !selectedResumeId) return true;
-    if (resumeSource === 'upload' && !file) return true;
-    return false;
-  };
-
+  const isSubmitDisabled = () => (!jobDescription || (resumeSource === 'saved' && !selectedResumeId) || (resumeSource === 'upload' && !file));
+  
   const handlePrint = () => {
+    const originalTitle = document.title;
+    if (resumeName) document.title = resumeName;
     window.print();
+    document.title = originalTitle;
+  };
+  const handleDocxDownload = () => exportToDocx(result, selectedTemplate, resumeName);
+  
+  const handleSaveToProfile = async () => {
+    if (!resumeName.trim()) {
+      setError('Resume Name cannot be empty.');
+      return;
+    }
+    setIsSaving(true);
+    setSaveSuccess('');
+    setError('');
+    try {
+      await api.post('/api/tailor/save', { editedData: result, resumeName });
+      setSaveSuccess('Saved successfully!');
+      setTimeout(() => setSaveSuccess(''), 3000);
+    } catch (err) {
+      setError('Failed to save resume. ' + (err.message || ''));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
+  // -------------------------------------------------------------
+  // RENDER: Post-Generation (Workspace Layout)
+  // -------------------------------------------------------------
   if (result) {
     return (
-      <div className="upload-page animate-fade-in">
-        <div className="dashboard-header-row no-print">
-          <button className="btn-primary" onClick={resetForm}>
-            Tailor Another Resume
-          </button>
-          <h2>Tailored Resume Complete!</h2>
-          <button className="btn-secondary" onClick={handlePrint}>
-            <Printer size={18} style={{ marginRight: '8px' }} />
-            Print to PDF
-          </button>
+      <div className="animate-fade-in" style={{ padding: '0 2rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.5rem' }}>
+           <span style={{ color: 'hsl(var(--text-muted))', cursor: 'pointer', fontWeight: '500' }} onClick={resetForm}>Tailoring</span>
+           <ChevronRight size={16} color="hsl(var(--text-muted))" />
+           <span style={{ fontWeight: '600' }}>Workspace</span>
         </div>
 
-        <div className="resume-preview-container" style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+        <div className="workspace-layout">
           
-          {/* Left Column: The Tailored Resume */}
-          <div className="tailored-resume card" style={{ flex: '1 1 60%', padding: '2rem', background: '#fff', color: '#000', fontFamily: 'Arial, sans-serif' }}>
-            <h1 style={{ textAlign: 'center', marginBottom: '0.5rem' }}>{result.personalInfo.name}</h1>
-            <p style={{ textAlign: 'center', marginBottom: '1.5rem', color: '#333' }}>
-              {result.personalInfo.email} | {result.personalInfo.phone || ''} | {result.personalInfo.location || ''}
-            </p>
-
-            <h3 style={{ borderBottom: '1px solid #ccc', paddingBottom: '0.5rem', marginTop: '1.5rem' }}>Professional Summary</h3>
-            <p style={{ marginTop: '0.5rem' }}>{result.summary}</p>
-
-            <h3 style={{ borderBottom: '1px solid #ccc', paddingBottom: '0.5rem', marginTop: '1.5rem' }}>Experience</h3>
-            {result.experience.map((exp, i) => (
-              <div key={i} style={{ marginTop: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                  <span>{exp.title}</span>
-                  <span>{exp.duration}</span>
+          {/* Left Sidebar */}
+          {!isEditing && (
+            <div className="workspace-sidebar no-print">
+              
+              {/* Actions Card */}
+              <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                   <Edit3 size={18} color="hsl(var(--primary))"/> Workspace Actions
+                </h3>
+                <button className="btn-primary" onClick={() => setIsEditing(true)} style={{ width: '100%' }}>
+                  Edit Resume Content
+                </button>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <button className="btn-secondary" onClick={handleSaveToProfile} disabled={isSaving}>
+                    <Save size={16} /> {isSaving ? 'Saving...' : 'Save Profile'}
+                  </button>
+                  <button className="btn-secondary" onClick={resetForm}>
+                    <RefreshCw size={16} /> Start Over
+                  </button>
                 </div>
-                <div style={{ fontStyle: 'italic', marginBottom: '0.5rem' }}>{exp.company}</div>
-                <ul style={{ paddingLeft: '1.5rem', margin: 0 }}>
-                  {exp.responsibilities.map((resp, j) => (
-                    <li key={j} style={{ marginBottom: '0.25rem' }}>{resp}</li>
+                {saveSuccess && <div style={{ color: 'hsl(var(--success))', fontSize: '13px', textAlign: 'center', fontWeight: 'bold' }}>{saveSuccess}</div>}
+                {error && <div style={{ color: 'hsl(var(--danger))', fontSize: '13px', textAlign: 'center' }}>{error}</div>}
+              </div>
+
+              {/* Export Card */}
+              <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                   <Download size={18} color="hsl(var(--primary))"/> Export Options
+                </h3>
+                <button className="btn-secondary" onClick={handleDocxDownload} style={{ width: '100%', justifyContent: 'flex-start' }}>
+                  <FileText size={16} style={{ color: 'hsl(var(--primary))' }} /> Download as DOCX
+                </button>
+                <button className="btn-secondary" onClick={handlePrint} style={{ width: '100%', justifyContent: 'flex-start' }}>
+                  <Printer size={16} style={{ color: 'hsl(var(--primary))' }} /> Print / Save as PDF
+                </button>
+              </div>
+
+              {/* Templates Card */}
+              <div className="card" style={{ padding: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                   <LayoutTemplate size={18} color="hsl(var(--primary))"/> Change Template
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {templates.map(tpl => (
+                    <div 
+                      key={tpl.id}
+                      onClick={() => setSelectedTemplate(tpl.id)}
+                      style={{
+                        padding: '0.75rem 1rem',
+                        borderRadius: '8px',
+                        border: selectedTemplate === tpl.id ? '2px solid hsl(var(--primary))' : '1px solid hsl(var(--border-color))',
+                        background: selectedTemplate === tpl.id ? 'hsl(var(--primary-light))' : 'transparent',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <span style={{ fontWeight: selectedTemplate === tpl.id ? '600' : '500', color: selectedTemplate === tpl.id ? 'hsl(var(--primary))' : 'inherit' }}>{tpl.name}</span>
+                      {selectedTemplate === tpl.id && <CheckCircle size={16} color="hsl(var(--primary))" />}
+                    </div>
                   ))}
-                </ul>
-              </div>
-            ))}
-
-            {result.projects && result.projects.length > 0 && (
-              <>
-                <h3 style={{ borderBottom: '1px solid #ccc', paddingBottom: '0.5rem', marginTop: '1.5rem' }}>Projects</h3>
-                {result.projects.map((proj, i) => (
-                  <div key={i} style={{ marginTop: '1rem' }}>
-                    <div style={{ fontWeight: 'bold' }}>{proj.title}</div>
-                    <p style={{ margin: '0.25rem 0' }}>{proj.description}</p>
-                    <p style={{ margin: 0, fontSize: '0.9em', color: '#555' }}><strong>Technologies:</strong> {proj.technologies.join(', ')}</p>
-                  </div>
-                ))}
-              </>
-            )}
-
-            <h3 style={{ borderBottom: '1px solid #ccc', paddingBottom: '0.5rem', marginTop: '1.5rem' }}>Education</h3>
-            {result.education.map((edu, i) => (
-              <div key={i} style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontWeight: 'bold' }}>{edu.degree}</div>
-                  <div>{edu.institution}</div>
                 </div>
-                <div style={{ fontStyle: 'italic' }}>{edu.year}</div>
               </div>
-            ))}
 
-            <h3 style={{ borderBottom: '1px solid #ccc', paddingBottom: '0.5rem', marginTop: '1.5rem' }}>Skills</h3>
-            <p style={{ marginTop: '0.5rem' }}>{result.skills.join(', ')}</p>
+              {/* ATS Dashboard Card */}
+              <div className="card" style={{ padding: '1.5rem' }}>
+                 <h3 style={{ fontSize: '1.1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                   <Sparkles size={18} color="hsl(var(--primary))"/> ATS Dashboard
+                 </h3>
+                 
+                 <div style={{ textAlign: 'center', marginBottom: '2rem', position: 'relative' }}>
+                    <svg viewBox="0 0 36 36" className={`circular-chart ${result.atsAnalysis.matchScore >= 80 ? 'success' : result.atsAnalysis.matchScore >= 60 ? 'warning' : 'danger'}`}>
+                      <path className="circle-bg"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                      <path className="circle"
+                        strokeDasharray={`${result.atsAnalysis.matchScore}, 100`}
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      />
+                      <text x="18" y="20.35" className="percentage">{result.atsAnalysis.matchScore}%</text>
+                    </svg>
+                    <div style={{ fontSize: '13px', color: 'hsl(var(--text-muted))', marginTop: '0.5rem', fontWeight: '500' }}>Match Score</div>
+                 </div>
+
+                 <div style={{ marginBottom: '1.5rem' }}>
+                   <h4 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'hsl(var(--text-muted))', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>Matched Skills</h4>
+                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                     {result.atsAnalysis.matchingSkills.map((skill, i) => <span key={i} className="chip success">{skill}</span>)}
+                   </div>
+                 </div>
+
+                 <div style={{ marginBottom: '1.5rem' }}>
+                   <h4 style={{ fontSize: '12px', textTransform: 'uppercase', color: 'hsl(var(--text-muted))', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>Missing Skills</h4>
+                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                     {result.atsAnalysis.missingSkills.map((skill, i) => <span key={i} className="chip danger">{skill}</span>)}
+                   </div>
+                 </div>
+                 
+                 <details style={{ background: 'hsl(var(--bg-app))', padding: '1rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))' }}>
+                   <summary style={{ fontWeight: '600', cursor: 'pointer', color: 'hsl(var(--primary))', fontSize: '14px' }}>View Suggestions</summary>
+                   <ul style={{ marginTop: '1rem', paddingLeft: '1.2rem', fontSize: '13px', color: 'hsl(var(--text-main))', lineHeight: '1.6' }}>
+                     {result.atsAnalysis.suggestionsForImprovement.map((sug, i) => <li key={i} style={{ marginBottom: '0.5rem' }}>{sug}</li>)}
+                   </ul>
+                 </details>
+              </div>
+
+            </div>
+          )}
+
+          {/* Right Canvas */}
+          <div className="workspace-canvas" style={{ display: 'block', overflowX: 'auto', padding: '2rem' }}>
+            {/* Resume Name Editor */}
+            <div className="no-print" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', background: 'hsl(var(--bg-card))', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', maxWidth: isEditing ? '100%' : '210mm', margin: isEditing ? '0 0 1.5rem 0' : '0 auto 1.5rem auto' }}>
+              <FileText size={20} color="hsl(var(--primary))" />
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'hsl(var(--text-muted))', fontWeight: 'bold', letterSpacing: '0.05em' }}>Resume Name</label>
+                <input 
+                  type="text" 
+                  value={resumeName} 
+                  onChange={(e) => setResumeName(e.target.value.replace(/[^a-zA-Z0-9_ -\.]/g, ''))}
+                  style={{ width: '100%', border: 'none', background: 'transparent', fontSize: '16px', fontWeight: '600', color: 'hsl(var(--text-main))', outline: 'none', padding: '2px 0' }}
+                  placeholder="e.g. Software_Engineer_Resume"
+                  required
+                />
+              </div>
+              <Edit3 size={16} color="hsl(var(--text-muted))" />
+            </div>
+
+            {isEditing ? (
+              <div style={{ display: 'flex', gap: '2rem', width: '100%', alignItems: 'flex-start' }}>
+                <div style={{ flex: '0 0 500px', display: 'flex', flexDirection: 'column', gap: '1rem' }} className="no-print">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'hsl(var(--bg-card))', padding: '1.5rem', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', border: '1px solid hsl(var(--border-color))' }}>
+                    <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <Edit3 size={20} color="hsl(var(--primary))"/> Editing Resume
+                    </h3>
+                    <button className="btn-secondary" onClick={() => setIsEditing(false)} style={{ padding: '8px 16px', fontSize: '13px' }}>
+                      Close Editor
+                    </button>
+                  </div>
+                  <ResumeEditor data={result} onChange={setResult} />
+                </div>
+                {/* Live Preview scaled down to fit next to editor smoothly */}
+                <div style={{ flex: '1', overflowX: 'auto', paddingBottom: '2rem' }}>
+                  <div className="tailored-resume live-preview" style={{ width: '210mm', minWidth: '210mm', minHeight: '297mm', boxShadow: 'var(--shadow-lg)', background: '#fff', margin: '0 auto', zoom: 0.85 }}>
+                    <TemplateRenderer templateId={selectedTemplate} data={result} />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="tailored-resume" style={{ width: '210mm', minWidth: '210mm', minHeight: '297mm', boxShadow: 'var(--shadow-lg)', background: '#fff', margin: '0 auto' }}>
+                <TemplateRenderer templateId={selectedTemplate} data={result} />
+              </div>
+            )}
           </div>
-
-          {/* Right Column: ATS Analysis (Hidden in Print) */}
-          <div className="ats-analysis card no-print" style={{ flex: '1 1 30%', alignSelf: 'flex-start' }}>
-            <h3 style={{ borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>ATS Analysis</h3>
-            
-            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-              <div style={{ fontSize: '3rem', fontWeight: 'bold', color: result.atsAnalysis.matchScore >= 80 ? 'var(--success)' : result.atsAnalysis.matchScore >= 60 ? 'var(--warning)' : 'var(--danger)' }}>
-                {result.atsAnalysis.matchScore}%
-              </div>
-              <p className="text-muted">Match Score</p>
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <h4 style={{ color: 'var(--success)', marginBottom: '0.5rem' }}>Matching Skills</h4>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                {result.atsAnalysis.matchingSkills.map((skill, i) => (
-                  <span key={i} style={{ background: 'var(--success-bg)', color: 'var(--success)', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.85rem' }}>{skill}</span>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <h4 style={{ color: 'var(--danger)', marginBottom: '0.5rem' }}>Missing Skills</h4>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                {result.atsAnalysis.missingSkills.map((skill, i) => (
-                  <span key={i} style={{ background: 'var(--danger-bg)', color: 'var(--danger)', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.85rem' }}>{skill}</span>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <h4>Keyword Match Analysis</h4>
-              <p className="text-muted" style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>{result.atsAnalysis.keywordMatchAnalysis}</p>
-            </div>
-
-            <div>
-              <h4>Suggestions for Improvement</h4>
-              <ul style={{ paddingLeft: '1.5rem', marginTop: '0.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                {result.atsAnalysis.suggestionsForImprovement.map((sug, i) => (
-                  <li key={i} style={{ marginBottom: '0.5rem' }}>{sug}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
+          
         </div>
-
+        
         <style dangerouslySetInnerHTML={{__html: `
           @media print {
-            body * {
-              visibility: hidden;
-            }
-            .tailored-resume, .tailored-resume * {
-              visibility: visible;
-            }
-            .tailored-resume {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-              border: none;
-              box-shadow: none;
-            }
-            .no-print {
-              display: none !important;
-            }
+            body * { visibility: hidden; }
+            .tailored-resume, .tailored-resume * { visibility: visible; }
+            .tailored-resume { position: absolute; left: 0; top: 0; width: 100%; border: none; box-shadow: none; zoom: 1 !important; }
+            .no-print { display: none !important; }
           }
         `}} />
       </div>
     );
   }
 
+  // -------------------------------------------------------------
+  // RENDER: Pre-Generation (Multi-Step Form)
+  // -------------------------------------------------------------
   return (
-    <div className="upload-page animate-fade-in">
-      <div className="page-header">
-        <h1>AI Resume Tailoring</h1>
-        <p className="subtitle">Optimize your resume against a specific job description for maximum ATS compatibility.</p>
+    <div className="upload-page animate-fade-in" style={{ maxWidth: '800px', margin: '0 auto', paddingBottom: '4rem' }}>
+      <div className="page-header" style={{ textAlign: 'center', marginBottom: '3rem' }}>
+        <h1 style={{ fontSize: '36px' }}>AI Resume Tailoring</h1>
+        <p className="subtitle">Optimize your resume against a specific job description to maximize ATS compatibility.</p>
       </div>
 
       {error && (
-        <div className="auth-error-alert">
+        <div className="auth-error-alert animate-fade-in">
           <AlertCircle size={18} />
           <span>{error}</span>
         </div>
       )}
 
       {loading ? (
-        <div className="loading-card card animate-pulse">
-          <div className="loading-content">
-            <div className="pulse-sparkle">
-              <Sparkles size={36} className="sparkle-icon spinner" />
+        <div className="step-card animate-fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4rem 2rem' }}>
+          <div className="loading-sequence">
+            <div className="pulse-sparkle" style={{ transform: 'scale(1.5)' }}>
+              <Sparkles size={48} className="sparkle-icon spinner" color="hsl(var(--primary))" />
             </div>
-            <h2>Tailoring Your Resume...</h2>
-            <div className="loading-steps">
-              <div className="step-row active">
-                <CheckCircle size={16} />
-                <span>Reading original resume</span>
-              </div>
-              <div className="step-row active">
-                <CheckCircle size={16} />
-                <span>Analyzing job description keywords</span>
-              </div>
-              <div className="step-row pending">
-                <RefreshCw size={16} className="spinner" />
-                <span>Aligning experiences and quantifying impact</span>
-              </div>
-              <div className="step-row pending text-muted">
-                <span>Generating ATS optimization report</span>
-              </div>
+            <h2 style={{ marginTop: '1rem', fontSize: '24px' }}>Tailoring Your Resume</h2>
+            <p className="loading-text">{loadingMessages[loadingStep]}</p>
+            <div style={{ width: '100%', maxWidth: '400px', height: '8px', background: 'hsl(var(--border-color))', borderRadius: '10px', overflow: 'hidden', marginTop: '1rem' }}>
+              <div style={{ width: `${(loadingStep + 1) * 20}%`, height: '100%', background: 'hsl(var(--primary))', transition: 'width 0.5s ease' }} />
             </div>
-            <p className="loading-hint">This usually takes about 15-20 seconds. Please do not close the page.</p>
           </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="upload-form-grid">
-          {/* Resume Selector & Upload Zone */}
-          <div className="form-column">
-            <div className="form-group">
-              <label className="section-label">Resume Selector *</label>
-              <span className="input-hint">Select a saved resume from your profile or upload a new file</span>
-              
+        <form onSubmit={handleSubmit}>
+          
+          {/* Step 1 */}
+          <div className="step-card animate-fade-in">
+            <div className="step-header">
+              <div className="step-number">1</div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '20px' }}>Select Base Resume</h3>
+                <p style={{ color: 'hsl(var(--text-muted))', fontSize: '14px', margin: '4px 0 0 0' }}>Choose a saved resume from your profile or upload a new PDF.</p>
+              </div>
+            </div>
+            
+            <div style={{ padding: '0 0.5rem' }}>
               {resumesLoading ? (
-                <div className="loading-dropdown-box">
-                  <RefreshCw className="spinner" size={16} />
-                  <span>Loading your resumes...</span>
+                <div className="loading-dropdown-box" style={{ padding: '1rem', background: 'hsl(var(--bg-app))', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px', color: 'hsl(var(--text-muted))' }}>
+                  <RefreshCw className="spinner" size={16} /> Loading your resumes...
                 </div>
               ) : (
-                <div className="resume-selector-wrapper">
+                <div className="resume-selector-wrapper" style={{ marginBottom: '1.5rem' }}>
                   <select
                     className="resume-dropdown-select"
+                    style={{ width: '100%', padding: '1rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', fontSize: '15px', background: 'hsl(var(--bg-card))', cursor: 'pointer' }}
                     value={resumeSource === 'upload' ? 'upload' : selectedResumeId}
                     onChange={(e) => {
                       if (e.target.value === 'upload') {
@@ -370,89 +447,109 @@ export default function TailorResume() {
                     }}
                   >
                     {savedResumes.map(r => (
-                      <option key={r._id} value={r._id}>
-                        💾 {r.filename}
-                      </option>
+                      <option key={r._id} value={r._id}>💾 {r.filename}</option>
                     ))}
                     <option value="upload">➕ Upload a new resume...</option>
                   </select>
                 </div>
               )}
-            </div>
 
-            {resumeSource === 'upload' ? (
-              <div className="form-group">
-                <label className="section-label">Upload PDF *</label>
+              {resumeSource === 'upload' ? (
                 <div 
                   className={`dropzone-card card ${isDragOver ? 'dragover' : ''} ${file ? 'has-file' : ''}`}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                   onClick={!file ? triggerFileSelect : undefined}
+                  style={{ borderStyle: 'dashed', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s', borderColor: isDragOver ? 'hsl(var(--primary))' : 'hsl(var(--border-color))', background: isDragOver ? 'hsl(var(--primary-light))' : 'hsl(var(--bg-app))' }}
                 >
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handleFileChange} 
-                    accept=".pdf" 
-                    style={{ display: 'none' }}
-                  />
-                  
+                  <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".pdf" style={{ display: 'none' }} />
                   {file ? (
-                    <div className="file-info-container">
-                      <FileText size={48} className="file-icon-color" />
+                    <div className="file-info-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                      <FileText size={48} color="hsl(var(--primary))" />
                       <div className="file-meta">
-                        <p className="file-name">{file.name}</p>
-                        <p className="file-size">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                        <p style={{ fontWeight: '600', fontSize: '16px' }}>{file.name}</p>
+                        <p style={{ color: 'hsl(var(--text-muted))', fontSize: '13px' }}>{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                       </div>
-                      <button type="button" className="btn-secondary remove-file-btn" onClick={removeFile}>
+                      <button type="button" className="btn-secondary" onClick={(e) => { e.stopPropagation(); removeFile(); }} style={{ marginTop: '0.5rem' }}>
                         Remove File
                       </button>
                     </div>
                   ) : (
-                    <div className="dropzone-prompt">
-                      <Upload size={48} className="upload-icon-color" />
-                      <h3>Drag & Drop Resume PDF</h3>
-                      <p>or click to browse local files (max 10MB)</p>
+                    <div className="dropzone-prompt" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '1rem 0' }}>
+                      <Upload size={48} color="hsl(var(--text-muted))" />
+                      <div>
+                        <h4 style={{ fontSize: '16px', marginBottom: '0.25rem' }}>Drag & Drop Resume PDF</h4>
+                        <p style={{ color: 'hsl(var(--text-muted))', fontSize: '14px' }}>or click to browse local files (max 10MB)</p>
+                      </div>
                     </div>
                   )}
                 </div>
-              </div>
-            ) : (
-              <div className="saved-resume-selected-card card animate-fade-in">
-                <FolderOpen size={32} className="folder-icon" />
-                <div className="selected-info">
-                  <h4>Saved Resume Selected</h4>
-                  <p className="text-muted">Using stored resume data from your Profile. No upload required.</p>
-                  <Link to="/profile" className="profile-edit-lnk">Manage your Resumes →</Link>
+              ) : (
+                <div className="saved-resume-selected-card card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'hsl(var(--bg-app))', border: '1px solid hsl(var(--border-color))' }}>
+                  <FolderOpen size={32} color="hsl(var(--primary))" />
+                  <div className="selected-info">
+                    <h4 style={{ fontSize: '15px' }}>Saved Resume Selected</h4>
+                    <p style={{ color: 'hsl(var(--text-muted))', fontSize: '13px' }}>Using stored resume data from your Profile. No upload required.</p>
+                  </div>
                 </div>
-              </div>
-            )}
-
-            <div className="info-helper-box">
-              <Info size={16} />
-              <p>Tailoring works best with resumes that contain clear sections (Experience, Education, Skills).</p>
+              )}
             </div>
           </div>
 
-          {/* Form Context Info */}
-          <div className="form-column">
-            <div className="form-group">
-              <label htmlFor="jobDescription" className="section-label">Target Job Role / Description *</label>
-              <span className="input-hint">Paste the complete job description to optimize for keywords and skills</span>
+          {/* Step 2 */}
+          <div className="step-card animate-fade-in" style={{ animationDelay: '0.1s' }}>
+            <div className="step-header">
+              <div className="step-number">2</div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '20px' }}>Target Job Description</h3>
+                <p style={{ color: 'hsl(var(--text-muted))', fontSize: '14px', margin: '4px 0 0 0' }}>Paste the full job description to optimize for keywords.</p>
+              </div>
+            </div>
+            <div style={{ padding: '0 0.5rem' }}>
               <textarea
-                id="jobDescription"
-                rows={10}
-                placeholder="Example: We are looking for a Software Engineer with strong experience in React, Node.js, and MongoDB. You will be responsible for building scalable APIs..."
+                rows={8}
+                placeholder="Example: We are looking for a Software Engineer with strong experience in React, Node.js, and MongoDB..."
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
+                style={{ width: '100%', padding: '1rem', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', fontSize: '15px', fontFamily: 'inherit', lineHeight: '1.5', resize: 'vertical' }}
                 required
               />
+              <div style={{ textAlign: 'right', fontSize: '12px', color: 'hsl(var(--text-muted))', marginTop: '0.5rem' }}>
+                {jobDescription.length} characters
+              </div>
             </div>
+          </div>
 
-            <button type="submit" className="btn-primary start-analysis-btn" disabled={isSubmitDisabled() || loading}>
-              Generate Tailored Resume
-            </button>
+          {/* Step 3 */}
+          <div className="step-card animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            <div className="step-header">
+              <div className="step-number">3</div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '20px' }}>Select Visual Template</h3>
+                <p style={{ color: 'hsl(var(--text-muted))', fontSize: '14px', margin: '4px 0 0 0' }}>Choose how your tailored resume will be formatted.</p>
+              </div>
+            </div>
+            <div className="template-grid" style={{ padding: '0 0.5rem' }}>
+              {templates.map(tpl => (
+                <div 
+                  key={tpl.id}
+                  onClick={() => setSelectedTemplate(tpl.id)}
+                  className={`template-card ${selectedTemplate === tpl.id ? 'selected' : ''}`}
+                >
+                  <LayoutTemplate size={32} className="template-icon" />
+                  <h4 style={{ fontSize: '15px', marginBottom: '0.5rem', color: selectedTemplate === tpl.id ? 'hsl(var(--primary))' : 'inherit' }}>{tpl.name}</h4>
+                  <p style={{ fontSize: '12px', color: 'hsl(var(--text-muted))', margin: 0 }}>{tpl.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Final CTA */}
+          <div style={{ textAlign: 'center', marginTop: '3rem' }} className="animate-fade-in" style={{ animationDelay: '0.3s' }}>
+             <button type="submit" className="btn-primary" style={{ padding: '1rem 3rem', fontSize: '1.1rem', borderRadius: '30px', boxShadow: 'var(--shadow-md)' }} disabled={isSubmitDisabled() || loading}>
+               <Sparkles size={20} /> Generate Tailored Resume
+             </button>
           </div>
         </form>
       )}
