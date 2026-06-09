@@ -69,6 +69,53 @@ async function tailorResume(req, res) {
   }
 }
 
+async function saveTailoredResume(req, res) {
+  try {
+    const { editedData, resumeName } = req.body;
+    const userId = req.user ? (req.user.userId || req.user.id) : null;
+
+    if (!editedData || !userId) {
+      return res.status(400).json({ status: "Failed", message: "Invalid data or unauthorized" });
+    }
+
+    let baseFilename = resumeName || `[Tailored] ${editedData.personalInfo?.name || "Resume"}`;
+    // Ensure filename ends with .pdf or .json for consistency, or just keep the base name without extension for display.
+    // The previous implementation added .json, let's keep the user's custom name as is but append .json internally or keep it clean.
+    // Since the prompt shows names like "Software_Engineer_Resume", we will save it as is.
+    
+    // Ensure filename uniqueness
+    let finalFilename = baseFilename;
+    let existing = await resumeModel.findOne({ user: userId, filename: finalFilename });
+    let counter = 1;
+    
+    while (existing) {
+      finalFilename = `${baseFilename}_${counter}`;
+      existing = await resumeModel.findOne({ user: userId, filename: finalFilename });
+      counter++;
+    }
+
+    const response = await resumeModel.create({
+      resume: JSON.stringify(editedData),
+      filename: finalFilename,
+      user: userId
+    });
+
+    res.status(201).json({
+      status: "Successful",
+      message: "Tailored resume saved to profile.",
+      response
+    });
+  } catch (err) {
+    console.error("Internal Server Error in saveTailoredResume:", err);
+    res.status(500).json({
+      status: "Failed",
+      message: "An unexpected error occurred while saving the tailored resume.",
+      error: err.message
+    });
+  }
+}
+
 module.exports = {
-  tailorResume
+  tailorResume,
+  saveTailoredResume
 };
