@@ -215,7 +215,7 @@ export default function Profile() {
             ) : (
               <div className="profile-resumes-list">
                 {resumes.map((resume) => (
-                  <div key={resume._id} className="profile-resume-row">
+                  <div key={resume._id} className="profile-resume-row stagger-item">
                     <div className="resume-row-left">
                       <FileText className="file-icon" size={20} />
                       <div className="resume-meta-info" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
