@@ -177,22 +177,70 @@ function cleanContentForStableModel(content) {
   return content;
 }
 
-async function generateContentWithFallback({ model = "gemini-3-flash-preview", contents, config }) {
-  try {
-    return await ai.models.generateContent({ model, contents, config });
-  } catch (error) {
-    if (model === "gemini-3-flash-preview") {
-      console.warn("gemini-3-flash-preview failed, falling back to gemini-2.5-flash. Error:", error.message);
-      
-      const cleanContents = Array.isArray(contents) 
-        ? contents.map(item => cleanContentForStableModel(item))
-        : cleanContentForStableModel(contents);
+let useFallbackDirectly = false;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-      return await ai.models.generateContent({ 
-        model: "gemini-2.5-flash", 
-        contents: cleanContents, 
-        config 
-      });
+async function generateWithRetry(fn, retries = 5, delay = 8000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      const isDailyLimit = error.message && (
+        error.message.includes("PerDay") || 
+        error.message.includes("limit: 20") ||
+        error.message.includes("limit: 0") ||
+        error.message.includes("daily")
+      );
+
+      if (isDailyLimit) {
+        console.warn("Daily request limit reached. Redirecting immediately to fallback model.");
+        useFallbackDirectly = true;
+        throw error;
+      }
+
+      const isRetryable = error.status === 429 || error.status === 503 ||
+        (error.message && (
+          error.message.includes("429") || 
+          error.message.includes("503") || 
+          error.message.includes("quota") ||
+          error.message.includes("RESOURCE_EXHAUSTED") ||
+          error.message.includes("high demand") ||
+          error.message.includes("UNAVAILABLE")
+        ));
+
+      if (isRetryable && i < retries - 1) {
+        console.warn(`Retryable error hit (${error.status || 'unknown status'}). Retrying in ${delay}ms... (Attempt ${i + 1}/${retries})`);
+        await sleep(delay);
+        delay *= 2; // exponential backoff
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
+async function generateContentWithFallback({ model = "gemini-3-flash-preview", contents, config }) {
+  const makeCall = async (targetModel) => {
+    return await ai.models.generateContent({ 
+      model: targetModel, 
+      contents: targetModel === "gemini-2.5-flash" ? cleanContentForStableModel(contents) : contents, 
+      config 
+    });
+  };
+
+  const selectedModel = useFallbackDirectly ? "gemini-2.5-flash" : model;
+
+  try {
+    return await generateWithRetry(() => makeCall(selectedModel), 5, 8000);
+  } catch (error) {
+    if (selectedModel !== "gemini-2.5-flash") {
+      console.warn(`${selectedModel} failed, falling back to gemini-2.5-flash. Error:`, error.message);
+      try {
+        return await generateWithRetry(() => makeCall("gemini-2.5-flash"), 5, 8000);
+      } catch (fallbackError) {
+        console.error("Fallback to gemini-2.5-flash also failed:", fallbackError);
+        throw fallbackError;
+      }
     }
     throw error;
   }

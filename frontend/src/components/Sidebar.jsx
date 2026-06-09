@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { api } from '../utils/api';
-import { LayoutDashboard, FileText, Briefcase, LogOut, User, ClipboardList, Wand2 } from 'lucide-react';
+import { LayoutDashboard, FileText, Briefcase, LogOut, User, ClipboardList, MessageSquare, Wand2 } from 'lucide-react';
 
 export default function Sidebar({ user, onLogoutSuccess }) {
   const navigate = useNavigate();
@@ -78,6 +78,13 @@ export default function Sidebar({ user, onLogoutSuccess }) {
         >
           <ClipboardList size={20} />
           <span>Interview Quiz</span>
+        </NavLink>
+        <NavLink 
+          to="/dashboard/mock-interview" 
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+        >
+          <MessageSquare size={20} />
+          <span>Mock Interview</span>
         </NavLink>
       </nav>
 

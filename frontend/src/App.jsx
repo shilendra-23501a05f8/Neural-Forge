@@ -9,8 +9,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Quiz from './pages/Quiz';
+import MockInterview from './pages/MockInterview';
 import TailorResume from './pages/TailorResume';
-import { Loader } from 'lucide-react';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -77,6 +77,7 @@ export default function App() {
           <Route path="/jobs" element={<JobSearch />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/quiz" element={<Quiz />} />
+          <Route path="/dashboard/mock-interview" element={<MockInterview />} />
           <Route path="/tailor" element={<TailorResume />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
