@@ -24,24 +24,19 @@ export default function Quiz() {
   const [quizData, setQuizData] = useState(null);
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [answers, setAnswers] = useState({}); // { questionIndex: selectedOptionString }
-  
 
-
-  // Fetch report history for setup dropdowns & fetch quiz history
+  // Fetch report history for setup dropdowns
   const loadSetupData = async () => {
     try {
-      // 1. Fetch analyzed reports to pre-populate jobs and skill gaps
       const reportData = await api.get('/api/interview/history');
       const reports = reportData.reports || [];
       
-      // Extract unique job titles
       const titles = [...new Set(reports.map(r => r.title || r.jobDescription).filter(Boolean))];
       setJobTitleList(titles);
       if (titles.length > 0) {
         setSelectedJobTitle(titles[0]);
       }
       
-      // Extract unique skill gaps
       const allGaps = [];
       reports.forEach(r => {
         if (r.skillGaps && Array.isArray(r.skillGaps)) {
@@ -162,7 +157,6 @@ export default function Quiz() {
   };
 
   const handleSubmitQuiz = () => {
-    // Grade the quiz
     const gradedQuestions = quizData.questions.map((q, idx) => {
       const selected = answers[idx] || '';
       const correct = q.correctAnswer || '';
@@ -176,7 +170,6 @@ export default function Quiz() {
       };
     });
 
-    // Adjust difficulty level one final time if the last question is correct
     const lastQuestionGraded = gradedQuestions[currentQuestionIdx];
     let finalDifficulty = difficulty;
     if (lastQuestionGraded && lastQuestionGraded.isCorrect) {
@@ -196,68 +189,92 @@ export default function Quiz() {
     setGameState('results');
   };
 
-  const getQuizScoreColor = (score) => {
-    if (score >= 80) return 'var(--success)';
-    if (score >= 50) return 'var(--warning)';
-    return 'var(--danger)';
+  const getScoreColor = (score) => {
+    if (score >= 80) return '#10b981';
+    if (score >= 50) return '#f59e0b';
+    return '#ef4444';
   };
 
+  // ==========================================
+  // RENDER: PLAYING GAME VIEW
+  // ==========================================
   if (gameState === 'playing') {
     const currentQuestion = quizData.questions[currentQuestionIdx];
     const totalQuestions = quizData.questions.length;
     const isAnswered = answers[currentQuestionIdx] !== undefined;
 
     return (
-      <div className="quiz-play-container animate-fade-in">
-        <div className="dashboard-header-row">
-          <button className="btn-secondary back-btn" onClick={() => {
-            if (window.confirm("Exit quiz? Your progress will be lost.")) setGameState('setup');
-          }}>
-            <ArrowLeft size={16} /> Exit Quiz
+      <div className="space-y-6 max-w-3xl mx-auto pb-16">
+        <div className="flex items-center gap-4">
+          <button 
+            className="px-4 py-2 rounded-lg bg-surface border border-border-dark text-xs font-semibold text-text-muted hover:text-text-main hover:border-primary/40 transition-all cursor-pointer flex items-center gap-1"
+            onClick={() => {
+              if (window.confirm("Exit quiz? Your progress will be lost.")) setGameState('setup');
+            }}
+          >
+            <ArrowLeft size={14} /> 
+            <span>Exit Quiz</span>
           </button>
-          <h2>{quizData.title || 'Interview Quiz'}</h2>
+          <h2 className="text-lg font-heading font-extrabold text-text-main leading-tight truncate">
+            {quizData.title || 'Interview Quiz'}
+          </h2>
         </div>
 
-        <div className="quiz-progress-bar-card card">
-          <div className="quiz-progress-header">
+        {/* Global Progress Indicators */}
+        <div className="p-5 glass-card border border-border-dark space-y-3">
+          <div className="flex justify-between text-xs font-semibold text-text-main">
             <span>Question {currentQuestionIdx + 1} of {totalQuestions}</span>
-            <span className="difficulty-badge">{difficulty}</span>
+            <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-primary/10 border border-primary/20 text-primary">
+              {difficulty}
+            </span>
           </div>
-          <div className="progress-track-bar">
+          <div className="h-1.5 bg-surface border border-border-dark rounded-full overflow-hidden">
             <div 
-              className="progress-fill-bar" 
+              className="h-full bg-primary rounded-full transition-all duration-300" 
               style={{ width: `${((currentQuestionIdx + 1) / totalQuestions) * 100}%` }}
             ></div>
           </div>
         </div>
 
-        <div className="active-question-card card animate-fade-in">
-          <div className="question-prompt-header">
-            <HelpCircle className="q-icon" size={24} />
-            <h3>{currentQuestion.question}</h3>
+        {/* Question Panel Card */}
+        <div className="p-6 md:p-8 glass-card border border-border-dark space-y-6">
+          <div className="flex items-start gap-4">
+            <HelpCircle className="text-primary flex-shrink-0 mt-0.5" size={24} />
+            <h3 className="text-base md:text-lg font-heading font-bold text-text-main leading-relaxed">
+              {currentQuestion.question}
+            </h3>
           </div>
 
-          <div className="quiz-options-list">
+          <div className="flex flex-col gap-3.5 pt-4 border-t border-border-dark">
             {currentQuestion.options.map((option, idx) => {
-              const letter = String.fromCharCode(65 + idx); // A, B, C, D
+              const letter = String.fromCharCode(65 + idx);
               const isSelected = answers[currentQuestionIdx] === option;
               return (
                 <button
                   key={idx}
-                  className={`quiz-option-row-btn ${isSelected ? 'selected' : ''}`}
+                  className={`w-full flex items-center text-left gap-4 p-4 rounded-xl border text-sm font-semibold transition-all cursor-pointer ${
+                    isSelected 
+                      ? 'bg-primary/10 border-primary text-primary shadow-md' 
+                      : 'border-border-dark bg-surface/30 text-text-muted hover:text-text-main hover:bg-surface/50'
+                  }`}
                   onClick={() => handleSelectOption(option)}
                 >
-                  <span className="option-letter">{letter}</span>
-                  <span className="option-text">{option}</span>
+                  <span className={`w-7 h-7 rounded-lg text-xs font-extrabold flex items-center justify-center flex-shrink-0 transition-colors ${
+                    isSelected ? 'bg-primary text-white' : 'bg-surface border border-border-dark text-text-muted'
+                  }`}>
+                    {letter}
+                  </span>
+                  <span className="leading-relaxed">{option}</span>
                 </button>
               );
             })}
           </div>
         </div>
 
-        <div className="quiz-nav-row">
+        {/* Action Controls */}
+        <div className="flex justify-between items-center gap-4">
           <button 
-            className="btn-secondary" 
+            className="px-4 py-2 rounded-lg bg-surface hover:bg-surface/85 border border-border-dark text-xs font-semibold text-text-main disabled:opacity-50 cursor-pointer"
             onClick={handlePrev} 
             disabled={currentQuestionIdx === 0}
           >
@@ -266,19 +283,22 @@ export default function Quiz() {
           
           {currentQuestionIdx === totalQuestions - 1 ? (
             <button 
-              className="btn-primary submit-quiz-btn" 
+              className="px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-lg shadow-primary/20 transition-all cursor-pointer disabled:opacity-60"
               onClick={handleSubmitQuiz} 
               disabled={loading}
             >
-              {loading ? <RefreshCw className="spinner" size={18} /> : 'Submit Quiz'}
+              {loading ? <RefreshCw className="spinner" size={16} /> : 'Submit Quiz'}
             </button>
           ) : (
             <button 
-              className="btn-primary" 
+              className="px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-lg shadow-primary/20 transition-all cursor-pointer disabled:opacity-50"
               onClick={handleNext}
               disabled={!isAnswered}
             >
-              Next Question <ChevronRight size={16} />
+              <span className="flex items-center gap-1">
+                <span>Next Question</span>
+                <ChevronRight size={14} />
+              </span>
             </button>
           )}
         </div>
@@ -286,155 +306,186 @@ export default function Quiz() {
     );
   }
 
+  // ==========================================
+  // RENDER: COMPLETED GAME RESULTS SCREEN
+  // ==========================================
   if (gameState === 'results') {
-    const scoreColor = getQuizScoreColor(quizData.score);
+    const scoreColor = getScoreColor(quizData.score);
     return (
-      <div className="quiz-results-container animate-fade-in">
-        <div className="dashboard-header-row">
-          <button className="btn-primary" onClick={() => setGameState('setup')}>
+      <div className="space-y-8 max-w-4xl mx-auto pb-16">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border-dark pb-6">
+          <h2 className="text-2xl font-heading font-extrabold text-text-main">Quiz Results</h2>
+          <button 
+            className="px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-semibold shadow-lg shadow-primary/20 transition-all cursor-pointer"
+            onClick={() => setGameState('setup')}
+          >
             Take Another Quiz
           </button>
-          <h2>Quiz Results</h2>
         </div>
 
-        <div className="results-summary-card card">
-          <div className="score-ring-wrapper">
-            <div 
-              className="progress-circle animate-scale-in" 
-              style={{ '--progress': quizData.score, background: `conic-gradient(${scoreColor} calc(var(--progress) * 1%), var(--border-color) 0)` }}
-            >
-              <span className="progress-text">{quizData.score}%</span>
-            </div>
-            <div className="results-score-info">
-              <Trophy className="trophy-icon animate-float" size={32} style={{ color: scoreColor }} />
-              <h3>Quiz Completed!</h3>
-              <p>
-                You got {quizData.questions.filter(q => q.isCorrect).length} out of {quizData.questions.length} questions correct.
-                {quizData.score >= 80 ? ' Fantastic job! You have strong grasp of these concepts.' : 
-                 quizData.score >= 50 ? ' Good try, but a bit more reading and preparation is advised.' : 
-                 ' Significant gaps in understanding. Go back to study guides.'}
-              </p>
-            </div>
+        {/* Score Ring Summary Box */}
+        <div className="p-6 md:p-8 glass-card border border-border-dark flex flex-col sm:flex-row items-center gap-8 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 to-transparent pointer-events-none"></div>
+          
+          <div className="progress-circle shadow-md glow-primary flex-shrink-0" style={{ '--progress': quizData.score, background: `conic-gradient(${scoreColor} calc(var(--progress) * 1%), rgba(255, 255, 255, 0.08) 0)` }}>
+            <span className="progress-text">{quizData.score}%</span>
+          </div>
+
+          <div className="space-y-3 text-center sm:text-left">
+            <Trophy className="mx-auto sm:mx-0 animate-float" size={32} style={{ color: scoreColor }} />
+            <h3 className="text-lg font-heading font-bold text-text-main">Quiz Completed!</h3>
+            <p className="text-xs text-text-muted leading-relaxed max-w-md">
+              You correctly resolved {quizData.questions.filter(q => q.isCorrect).length} out of {quizData.questions.length} questions.
+              {quizData.score >= 80 
+                ? ' Excellent performance! You demonstrate an exceptional command of these concepts.' 
+                : quizData.score >= 50 
+                ? ' Commendable attempt, but addressing the minor gaps in review below will strengthen your depth.' 
+                : ' Noticeable understanding gaps identified. We recommend revisiting the study resources.'}
+            </p>
           </div>
         </div>
 
-        <h3 className="section-title">Question Breakdown</h3>
-        <div className="results-breakdown-list">
-          {quizData.questions.map((q, idx) => (
-            <div key={idx} className={`result-question-card card ${q.isCorrect ? 'correct-border' : 'incorrect-border'} stagger-item`}>
-              <div className="result-q-header">
-                {q.isCorrect ? (
-                  <CheckCircle size={22} className="correct-icon" />
-                ) : (
-                  <XCircle size={22} className="incorrect-icon" />
-                )}
-                <h4>Question {idx + 1}: {q.question}</h4>
-              </div>
+        {/* Question Breakdown List */}
+        <div className="space-y-6">
+          <h3 className="font-heading font-bold text-lg text-text-main">Question Breakdown</h3>
+          <div className="space-y-6">
+            {quizData.questions.map((q, idx) => (
+              <div 
+                key={idx} 
+                className={`p-6 glass-card border flex flex-col gap-5 ${
+                  q.isCorrect ? 'border-green-500/25 bg-green-500/5' : 'border-red-500/25 bg-red-500/5'
+                }`}
+              >
+                <div className="flex items-start gap-3.5">
+                  {q.isCorrect ? (
+                    <CheckCircle size={22} className="text-green-400 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <XCircle size={22} className="text-red-400 flex-shrink-0 mt-0.5" />
+                  )}
+                  <h4 className="font-heading font-bold text-sm text-text-main leading-relaxed">
+                    Question {idx + 1}: {q.question}
+                  </h4>
+                </div>
 
-              <div className="result-options-list-review">
-                {q.options.map((option, oIdx) => {
-                  const letter = String.fromCharCode(65 + oIdx);
-                  const isSelected = q.selectedAnswer === option;
-                  const isCorrectAnswer = q.correctAnswer === option;
-                  
-                  let styleClass = '';
-                  if (isCorrectAnswer) styleClass = 'correct-choice';
-                  else if (isSelected) styleClass = 'incorrect-choice';
+                <div className="grid grid-cols-1 gap-2.5 pl-9">
+                  {q.options.map((option, oIdx) => {
+                    const letter = String.fromCharCode(65 + oIdx);
+                    const isSelected = q.selectedAnswer === option;
+                    const isCorrectAnswer = q.correctAnswer === option;
+                    
+                    let styleClass = 'border-border-dark bg-surface/30 text-text-muted';
+                    if (isCorrectAnswer) styleClass = 'border-green-500/30 bg-green-500/10 text-green-400';
+                    else if (isSelected) styleClass = 'border-red-500/30 bg-red-500/10 text-red-400';
 
-                  return (
-                    <div key={oIdx} className={`result-option-row-review ${styleClass} stagger-item`}>
-                      <span className="option-letter">{letter}</span>
-                      <span className="option-text">{option}</span>
-                      {isCorrectAnswer && <span className="answer-badge correct">Correct Answer</span>}
-                      {isSelected && !isCorrectAnswer && <span className="answer-badge incorrect">Your Answer</span>}
-                    </div>
-                  );
-                })}
-              </div>
+                    return (
+                      <div 
+                        key={oIdx} 
+                        className={`flex items-center justify-between p-3 rounded-lg border text-xs font-semibold ${styleClass}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="font-bold">{letter}</span>
+                          <span>{option}</span>
+                        </div>
+                        {isCorrectAnswer && <span className="px-2 py-0.5 rounded text-[8px] bg-green-500/20 text-green-400 uppercase font-bold tracking-wider">Correct Answer</span>}
+                        {isSelected && !isCorrectAnswer && <span className="px-2 py-0.5 rounded text-[8px] bg-red-500/20 text-red-400 uppercase font-bold tracking-wider">Your Answer</span>}
+                      </div>
+                    );
+                  })}
+                </div>
 
-              <div className="ai-explanation-box">
-                <Brain size={18} className="brain-icon" />
-                <div className="explanation-content">
-                  <strong>AI Explanation:</strong>
-                  <p>{q.explanation}</p>
+                <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-surface/40 border border-border-dark text-xs text-text-muted leading-relaxed pl-9">
+                  <Brain size={16} className="text-primary flex-shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <strong className="text-text-main block">AI Conceptual Explanation:</strong>
+                    <p>{q.explanation}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
+  // ==========================================
+  // RENDER: SETUP SCREEN
+  // ==========================================
   return (
-    <div className="quiz-setup-container animate-fade-in">
-      <div className="page-header">
-        <h1>Interview Prep Quiz</h1>
-        <p className="subtitle">Test your tech skills and job knowledge through customized, dynamically generated MCQs</p>
+    <div className="space-y-8 max-w-2xl mx-auto pb-16">
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-heading font-extrabold text-text-main tracking-tight">Interview Prep Quiz</h1>
+        <p className="text-text-muted text-sm max-w-xl mx-auto">Test your technical skills and job knowledge through customized, dynamically generated MCQs</p>
       </div>
 
       {error && (
-        <div className="auth-error-alert">
+        <div className="flex items-center gap-2 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
           <AlertCircle size={18} />
           <span>{error}</span>
         </div>
       )}
 
       {loading ? (
-        <div className="loading-card card">
-          <div className="loading-content">
-            <div className="pulse-sparkle">
-              <Brain size={36} className="sparkle-icon spinner" />
+        <div className="p-8 md:p-12 glass-card border border-border-dark flex items-center justify-center glow-primary">
+          <div className="text-center w-full space-y-6">
+            <div className="inline-flex p-4 rounded-full bg-primary/10 border border-primary/20 text-primary animate-pulse-glow">
+              <Brain size={36} className="spinner" />
             </div>
-            <h2>Generating Dynamic Interview Quiz...</h2>
-            <p className="job-agent-searching-hint">
-              AI is compiling multiple-choice questions matching difficulty "{difficulty}" and questions count "{numQuestions}".
+            <h2 className="text-xl font-heading font-extrabold text-text-main">Generating Dynamic Interview Quiz...</h2>
+            <p className="text-xs text-text-muted max-w-xs mx-auto">
+              AI is compiling multiple-choice questions matching difficulty "{difficulty}" and question count "{numQuestions}".
             </p>
-            <div className="search-status-bar">
-              <div className="status-progress-track">
-                <div className="status-progress-fill"></div>
-              </div>
+            
+            <div className="w-full max-w-xs mx-auto h-1 bg-surface rounded-full overflow-hidden">
+              <div className="h-full bg-primary animate-pulse-glow" style={{ width: '50%' }}></div>
             </div>
           </div>
         </div>
       ) : (
-        <div className="quiz-setup-wrapper" style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-          {/* Settings Column */}
-          <div className="form-column" style={{ width: '100%', maxWidth: '600px' }}>
-            <form onSubmit={handleStartQuiz} className="quiz-setup-card card">
-              <h3>Quiz Configuration</h3>
+        <div className="p-6 glass-card border border-border-dark">
+          <form onSubmit={handleStartQuiz} className="space-y-5">
+            <h3 className="font-heading font-bold text-sm text-text-main">Quiz Configuration</h3>
 
-              <div className="form-group">
-                <label className="section-label">Quiz Scope Mode</label>
-                <div className="mode-toggle-buttons">
-                  <button
-                    type="button"
-                    className={`btn-secondary mode-btn ${quizMode === 'jd' ? 'active-mode' : ''}`}
-                    onClick={() => setQuizMode('jd')}
-                  >
-                    Target Job Profile
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn-secondary mode-btn ${quizMode === 'skills' ? 'active-mode' : ''}`}
-                    onClick={() => setQuizMode('skills')}
-                  >
-                    Target Skills
-                  </button>
-                </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-text-muted block">Quiz Scope Mode</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                    quizMode === 'jd' 
+                      ? 'bg-primary/10 border-primary text-primary shadow-sm' 
+                      : 'border-border-dark bg-surface/30 text-text-muted hover:text-text-main'
+                  }`}
+                  onClick={() => setQuizMode('jd')}
+                >
+                  Target Job Profile
+                </button>
+                <button
+                  type="button"
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                    quizMode === 'skills' 
+                      ? 'bg-primary/10 border-primary text-primary shadow-sm' 
+                      : 'border-border-dark bg-surface/30 text-text-muted hover:text-text-main'
+                  }`}
+                  onClick={() => setQuizMode('skills')}
+                >
+                  Target Skills
+                </button>
               </div>
+            </div>
 
-              {quizMode === 'jd' ? (
-                <div className="form-group animate-fade-in">
-                  <label htmlFor="jobTitleSelect" className="section-label">Select Job Profile *</label>
-                  {jobTitleList.length === 0 ? (
-                    <div className="no-history-warning">
-                      No analyzed job profiles found. Upload a resume first to extract targets!
-                    </div>
-                  ) : (
+            {quizMode === 'jd' ? (
+              <div className="space-y-2 animate-fade-in">
+                <label htmlFor="jobTitleSelect" className="text-xs font-semibold text-text-muted block">Select Job Profile *</label>
+                {jobTitleList.length === 0 ? (
+                  <div className="p-3 border border-red-500/20 bg-red-500/5 rounded text-xs text-red-400">
+                    No analyzed job profiles found. Upload a resume first to extract targets!
+                  </div>
+                ) : (
+                  <div className="relative">
                     <select
                       id="jobTitleSelect"
-                      className="resume-dropdown-select"
+                      className="w-full px-3.5 py-2.5 rounded-lg bg-surface border border-border-dark text-xs text-text-main focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all cursor-pointer appearance-none"
                       value={selectedJobTitle}
                       onChange={(e) => setSelectedJobTitle(e.target.value)}
                     >
@@ -442,64 +493,74 @@ export default function Quiz() {
                         <option key={idx} value={t}>{t}</option>
                       ))}
                     </select>
-                  )}
-                </div>
-              ) : (
-                <div className="form-group animate-fade-in">
-                  <label className="section-label">Select Target Skills *</label>
-                  
-                  {availableSkills.length > 0 && (
-                    <div className="skills-checkbox-grid">
-                      {availableSkills.map((skill, idx) => (
-                        <label key={idx} className="skill-chk-label">
-                          <input
-                            type="checkbox"
-                            checked={selectedSkills.includes(skill)}
-                            onChange={() => handleToggleSkill(skill)}
-                          />
-                          <span>{skill}</span>
-                        </label>
-                      ))}
+                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted text-[10px]">
+                      ▼
                     </div>
-                  )}
-
-                  <div className="add-custom-skill-row">
-                    <input
-                      type="text"
-                      placeholder="Add another skill (e.g. Docker, SQL)..."
-                      value={customSkillInput}
-                      onChange={(e) => setCustomSkillInput(e.target.value)}
-                    />
-                    <button type="button" className="btn-secondary" onClick={handleAddCustomSkill}>
-                      Add
-                    </button>
                   </div>
-                </div>
-              )}
-
-              <div className="form-group">
-                <label htmlFor="numQuestionsInput" className="section-label">Number of Questions</label>
-                <input
-                  id="numQuestionsInput"
-                  type="number"
-                  min="1"
-                  max="30"
-                  className="resume-dropdown-select"
-                  placeholder="Enter number of questions (1-30)"
-                  value={numQuestions}
-                  onChange={(e) => setNumQuestions(e.target.value)}
-                />
+                )}
               </div>
+            ) : (
+              <div className="space-y-4 animate-fade-in">
+                <label className="text-xs font-semibold text-text-muted block">Select Target Skills *</label>
+                
+                {availableSkills.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2 max-h-[140px] overflow-y-auto p-2 border border-border-dark rounded bg-surface/30">
+                    {availableSkills.map((skill, idx) => (
+                      <label key={idx} className="flex items-center gap-2 text-xs text-text-muted cursor-pointer hover:text-text-main transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={selectedSkills.includes(skill)}
+                          onChange={() => handleToggleSkill(skill)}
+                          className="rounded text-primary border-border-dark bg-surface focus:ring-primary focus:ring-offset-0 focus:ring-1"
+                        />
+                        <span>{skill}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
 
-              <button 
-                type="submit" 
-                className="btn-primary start-analysis-btn"
-                disabled={(quizMode === 'jd' && !selectedJobTitle) || (quizMode === 'skills' && selectedSkills.length === 0)}
-              >
-                <Play size={16} /> Generate & Start Quiz
-              </button>
-            </form>
-          </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Add another skill (e.g. Docker, SQL)..."
+                    value={customSkillInput}
+                    onChange={(e) => setCustomSkillInput(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded bg-surface border border-border-dark text-xs text-text-main placeholder-text-muted/30 focus:outline-none focus:border-primary transition-all"
+                  />
+                  <button 
+                    type="button" 
+                    className="px-3 py-2 rounded bg-surface hover:bg-surface/85 border border-border-dark text-xs font-semibold text-text-main cursor-pointer" 
+                    onClick={handleAddCustomSkill}
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label htmlFor="numQuestionsInput" className="text-xs font-semibold text-text-muted block">Number of Questions</label>
+              <input
+                id="numQuestionsInput"
+                type="number"
+                min="1"
+                max="30"
+                className="w-full px-3.5 py-2.5 rounded-lg bg-surface border border-border-dark text-xs text-text-main placeholder-text-muted/40 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+                placeholder="Enter number of questions (1-30)"
+                value={numQuestions}
+                onChange={(e) => setNumQuestions(e.target.value)}
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-lg shadow-primary/20 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              disabled={(quizMode === 'jd' && !selectedJobTitle) || (quizMode === 'skills' && selectedSkills.length === 0)}
+            >
+              <Play size={14} /> 
+              <span>Generate & Start Quiz</span>
+            </button>
+          </form>
         </div>
       )}
     </div>

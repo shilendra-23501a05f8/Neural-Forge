@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../utils/api';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Briefcase, 
   Upload, 
@@ -45,16 +46,16 @@ export default function MockInterview() {
 
   // Loading & Session States
   const [loading, setLoading] = useState(false);
-  const [loadingStep, setLoadingStep] = useState(0); // 0: Start, 1: Planner, 2: Generator, 3: Initiating
+  const [loadingStep, setLoadingStep] = useState(0); 
   const [error, setError] = useState('');
-  const [session, setSession] = useState(null); // active interview session
+  const [session, setSession] = useState(null); 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   // Active Answering Mode
-  const [answerType, setAnswerType] = useState('text'); // 'text' | 'audio'
-  const [answer, setAnswer] = useState(''); // text answer
+  const [answerType, setAnswerType] = useState('text'); 
+  const [answer, setAnswer] = useState(''); 
   const [evaluating, setEvaluating] = useState(false);
-  const [evaluationResult, setEvaluationResult] = useState(null); // score, feedback, idealAnswer, isLast
+  const [evaluationResult, setEvaluationResult] = useState(null); 
 
   // Audio Recording States
   const [isRecording, setIsRecording] = useState(false);
@@ -137,8 +138,6 @@ export default function MockInterview() {
         const url = URL.createObjectURL(blob);
         setAudioBlob(blob);
         setAudioUrl(url);
-        
-        // Stop all audio tracks to release microphone
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -169,27 +168,14 @@ export default function MockInterview() {
   };
 
   // PDF drop zone helpers
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragOver(false);
-  };
-
+  const handleDragOver = (e) => { e.preventDefault(); setIsDragOver(true); };
+  const handleDragLeave = () => { setIsDragOver(false); };
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragOver(false);
-    const droppedFile = e.dataTransfer.files[0];
-    validateAndSetFile(droppedFile);
+    validateAndSetFile(e.dataTransfer.files[0]);
   };
-
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    validateAndSetFile(selectedFile);
-  };
-
+  const handleFileChange = (e) => validateAndSetFile(e.target.files[0]);
   const validateAndSetFile = (selectedFile) => {
     if (!selectedFile) return;
     if (selectedFile.type !== 'application/pdf') {
@@ -205,15 +191,8 @@ export default function MockInterview() {
     setError('');
     setFile(selectedFile);
   };
-
-  const triggerFileSelect = () => {
-    fileInputRef.current.click();
-  };
-
-  const removeFile = () => {
-    setFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
+  const triggerFileSelect = () => fileInputRef.current.click();
+  const removeFile = () => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; };
 
   // Launch interview
   const handleStartInterview = async (e) => {
@@ -225,7 +204,7 @@ export default function MockInterview() {
 
     setLoading(true);
     setError('');
-    setLoadingStep(1); // Planner analysis
+    setLoadingStep(1);
 
     try {
       let finalResumeId = null;
@@ -245,7 +224,7 @@ export default function MockInterview() {
         finalResumeId = selectedResumeId;
       }
 
-      setLoadingStep(2); // Question generator
+      setLoadingStep(2);
 
       const startData = await api.post('/api/mock-interview/start', {
         jobRole: jobRole.trim(),
@@ -262,7 +241,7 @@ export default function MockInterview() {
       }
     } catch (err) {
       console.error("Start interview failed:", err);
-      setError(err.message || 'Failed to generate interview. Please check your network and API key.');
+      setError(err.message || 'Failed to generate interview. Please check your network.');
     } finally {
       setLoading(false);
       setLoadingStep(0);
@@ -285,18 +264,13 @@ export default function MockInterview() {
       if (answerType === 'text') {
         formData.append('userAnswer', answer);
       } else {
-        // Upload audio blob as a file
         const audioFile = new File([audioBlob], 'recording.webm', { type: 'audio/webm' });
         formData.append('audio', audioFile);
       }
 
-      // Call multipart endpoint
       const data = await api.upload(`/api/mock-interview/${session._id}/answer`, formData);
-
-      // Save evaluation and dynamic question details
       setEvaluationResult(data.evaluation);
       
-      // Update session document to include dynamic transcription if spoken
       if (answerType === 'audio' && data.evaluation.userAnswer) {
         setAnswer(data.evaluation.userAnswer);
       }
@@ -313,16 +287,13 @@ export default function MockInterview() {
     if (evaluationResult && evaluationResult.nextQuestion) {
       const nextQ = evaluationResult.nextQuestion;
       
-      // Push next question into local session state
       setSession(prev => {
         const updatedQs = [...prev.questions];
-        // Ensure we update current index answered details
         updatedQs[currentQuestionIndex].userAnswer = answer;
         updatedQs[currentQuestionIndex].score = evaluationResult.score;
         updatedQs[currentQuestionIndex].feedback = evaluationResult.feedback;
         updatedQs[currentQuestionIndex].idealAnswer = evaluationResult.idealAnswer;
 
-        // Push new empty question
         updatedQs.push({
           question: nextQ.question,
           category: nextQ.category,
@@ -347,7 +318,7 @@ export default function MockInterview() {
   // Compile final report
   const handleFinishInterview = async () => {
     setLoading(true);
-    setLoadingStep(3); // Feedback report compiling
+    setLoadingStep(3);
     setError('');
     try {
       const data = await api.post(`/api/mock-interview/${session._id}/finish`);
@@ -361,7 +332,6 @@ export default function MockInterview() {
     }
   };
 
-  // Reset/Restart
   const resetInterview = () => {
     setSession(null);
     setAnswer('');
@@ -370,17 +340,17 @@ export default function MockInterview() {
     setError('');
   };
 
-  // Scoring styling helpers
+  // Scoring helpers
   const getScoreColorClass = (score) => {
-    if (score >= 80) return 'text-success bg-success-light border-success-light';
-    if (score >= 60) return 'text-warning bg-warning-light border-warning-light';
-    return 'text-danger bg-danger-light border-danger-light';
+    if (score >= 80) return 'bg-green-500/10 border-green-500/20 text-green-400';
+    if (score >= 60) return 'bg-amber-500/10 border-amber-500/20 text-amber-400';
+    return 'bg-red-500/10 border-red-500/20 text-red-400';
   };
 
   const getStrokeColor = (score) => {
-    if (score >= 80) return 'hsl(var(--success))';
-    if (score >= 60) return 'hsl(var(--warning))';
-    return 'hsl(var(--danger))';
+    if (score >= 80) return '#10b981';
+    if (score >= 60) return '#f59e0b';
+    return '#ef4444';
   };
 
   const formatDate = (dateString) => {
@@ -398,55 +368,76 @@ export default function MockInterview() {
   // ==========================================
   if (loading) {
     return (
-      <div className="dashboard-page animate-fade-in">
-        <div className="loading-card card animate-pulse" style={{ maxWidth: '640px', margin: '40px auto' }}>
-          <div className="loading-content" style={{ padding: '24px', textAlign: 'center' }}>
-            <div className="pulse-sparkle" style={{ marginBottom: '24px' }}>
-              <Sparkles size={48} className="sparkle-icon spinner" style={{ color: 'hsl(var(--primary))' }} />
-            </div>
-            {loadingStep === 1 && (
-              <>
-                <h2>Planner Agent Extracting Core Profile...</h2>
-                <p className="subtitle" style={{ fontSize: '14px', marginTop: '8px' }}>
-                  Analyzing target job role details, core technologies, and parsing projects...
-                </p>
-                <div className="loading-steps" style={{ textAlign: 'left', marginTop: '24px' }}>
-                  <div className="step-row active"><CheckCircle size={16} /> <span>Interpreting Job Description</span></div>
-                  <div className="step-row pending"><RefreshCw size={16} className="spinner" /> <span>Mapping core keywords and tech stack</span></div>
-                  <div className="step-row pending text-muted"><span>Generating custom question schemas</span></div>
-                </div>
-              </>
-            )}
-            {loadingStep === 2 && (
-              <>
-                <h2>Interview Agent Formulating Target Question 1...</h2>
-                <p className="subtitle" style={{ fontSize: '14px', marginTop: '8px' }}>
-                  Creating initial Technical concept challenges...
-                </p>
-                <div className="loading-steps" style={{ textAlign: 'left', marginTop: '24px' }}>
-                  <div className="step-row active"><CheckCircle size={16} /> <span>Planner roadmap ready</span></div>
-                  <div className="step-row active"><CheckCircle size={16} /> <span>Skills analysis complete</span></div>
-                  <div className="step-row pending"><RefreshCw size={16} className="spinner" /> <span>Composing real-world mock question</span></div>
-                </div>
-              </>
-            )}
-            {loadingStep === 3 && (
-              <>
-                <h2>Feedback Agent Consolidating Reports...</h2>
-                <p className="subtitle" style={{ fontSize: '14px', marginTop: '8px' }}>
-                  Aggregating transcripts, checking scores, and writing recommendations...
-                </p>
-                <div className="loading-steps" style={{ textAlign: 'left', marginTop: '24px' }}>
-                  <div className="step-row active"><CheckCircle size={16} /> <span>Main evaluations finalized</span></div>
-                  <div className="step-row active"><CheckCircle size={16} /> <span>Transcripts processed successfully</span></div>
-                  <div className="step-row pending"><RefreshCw size={16} className="spinner" /> <span>Compiling strengths & weaknesses dashboard</span></div>
-                </div>
-              </>
-            )}
-            <p className="loading-hint" style={{ marginTop: '24px', fontSize: '12px' }}>
-              Please do not refresh or navigate away.
-            </p>
+      <div className="p-8 md:p-12 glass-card border border-border-dark flex items-center justify-center glow-primary max-w-lg mx-auto my-12">
+        <div className="text-center w-full space-y-6">
+          <div className="inline-flex p-4 rounded-full bg-primary/10 border border-primary/20 text-primary animate-pulse-glow">
+            <Sparkles size={36} className="spinner" />
           </div>
+          
+          {loadingStep === 1 && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-heading font-extrabold text-text-main">Planner Agent Setting Up Session...</h2>
+              <p className="text-xs text-text-muted">Analyzing target job role details, core technologies, and projects...</p>
+              <div className="space-y-2.5 pt-4 text-left max-w-xs mx-auto">
+                <div className="flex items-center gap-2.5 text-xs text-text-main font-semibold">
+                  <CheckCircle size={16} className="text-primary" />
+                  <span>Interpreting Job Description</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-primary font-semibold">
+                  <RefreshCw size={16} className="spinner" />
+                  <span>Mapping core keywords and tech stack</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-text-muted/40 font-semibold">
+                  <div className="w-4 h-4 rounded-full border border-border-dark flex-shrink-0"></div>
+                  <span>Generating custom question schemas</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {loadingStep === 2 && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-heading font-extrabold text-text-main">Interview Agent Drafting Questions...</h2>
+              <p className="text-xs text-text-muted">Creating initial Technical concepts challenges...</p>
+              <div className="space-y-2.5 pt-4 text-left max-w-xs mx-auto">
+                <div className="flex items-center gap-2.5 text-xs text-text-main font-semibold">
+                  <CheckCircle size={16} className="text-primary" />
+                  <span>Planner roadmap ready</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-text-main font-semibold">
+                  <CheckCircle size={16} className="text-primary" />
+                  <span>Skills analysis complete</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-primary font-semibold">
+                  <RefreshCw size={16} className="spinner" />
+                  <span>Composing real-world mock question</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {loadingStep === 3 && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-heading font-extrabold text-text-main">Feedback Agent Consolidating Reports...</h2>
+              <p className="text-xs text-text-muted">Aggregating transcripts, checking scores, and writing recommendations...</p>
+              <div className="space-y-2.5 pt-4 text-left max-w-xs mx-auto">
+                <div className="flex items-center gap-2.5 text-xs text-text-main font-semibold">
+                  <CheckCircle size={16} className="text-primary" />
+                  <span>Main evaluations finalized</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-text-main font-semibold">
+                  <CheckCircle size={16} className="text-primary" />
+                  <span>Transcripts processed successfully</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-primary font-semibold">
+                  <RefreshCw size={16} className="spinner" />
+                  <span>Compiling strengths & weaknesses dashboard</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <p className="text-[10px] text-text-muted pt-4">Please do not refresh or navigate away.</p>
         </div>
       </div>
     );
@@ -456,137 +447,106 @@ export default function MockInterview() {
   // RENDER: RESULTS DASHBOARD SCREEN
   // ==========================================
   if (session && session.status === 'completed') {
-    const radius = 55;
-    const strokeWidth = 10;
-    const circumference = 2 * Math.PI * radius;
-    const overallOffset = circumference - (session.overallScore / 100) * circumference;
-
     return (
-      <div id="printable-report" className="dashboard-page animate-fade-in" style={{ maxWidth: '1000px', margin: '0 auto' }}>
-        <div className="dashboard-header" style={{ marginBottom: '24px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <span className="skill-severity" style={{ backgroundColor: 'hsl(var(--primary-light))', color: 'hsl(var(--primary))' }}>
+      <div id="printable-report" className="space-y-8 max-w-5xl mx-auto pb-16">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border-dark pb-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 border border-primary/20 text-primary uppercase">
                 {session.difficulty}
               </span>
-              <span className="report-row-date">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-muted">
                 📅 {formatDate(session.updatedAt)}
               </span>
             </div>
-            <h1>Interview Performance Results</h1>
-            <p className="subtitle">Target Job Role: <strong>{session.jobRole}</strong></p>
+            <h1 className="text-3xl font-heading font-extrabold text-text-main tracking-tight">Interview Performance Results</h1>
+            <p className="text-xs text-text-muted">Target Job Role: <strong className="text-text-main">{session.jobRole}</strong></p>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }} className="no-print">
-            <button className="btn-secondary" onClick={() => window.print()} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <FileText size={16} />
+          <div className="flex items-center gap-3 no-print">
+            <button 
+              className="px-4 py-2.5 rounded-lg bg-surface hover:bg-surface/80 border border-border-dark text-xs font-semibold text-text-main transition-colors flex items-center gap-2 cursor-pointer"
+              onClick={() => window.print()}
+            >
+              <FileText size={14} className="text-primary" />
               <span>Download PDF Report</span>
             </button>
-            <button className="btn-primary" onClick={resetInterview}>
+            <button 
+              className="px-4 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-lg shadow-primary/20 transition-all cursor-pointer"
+              onClick={resetInterview}
+            >
               Start New Interview
             </button>
           </div>
         </div>
 
-        {/* Scoring Dashboard Row */}
-        <div className="analytics-grid" style={{ marginBottom: '32px' }}>
-          <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px', padding: '24px' }}>
-            <div style={{ position: 'relative', width: '130px', height: '130px' }}>
-              <svg width="130" height="130" style={{ transform: 'rotate(-90deg)' }}>
-                <circle 
-                  cx="65" cy="65" r={radius} 
-                  stroke="hsl(var(--border-color))" 
-                  strokeWidth={strokeWidth} 
-                  fill="transparent" 
-                />
-                <circle 
-                  cx="65" cy="65" r={radius} 
-                  stroke={getStrokeColor(session.overallScore)} 
-                  strokeWidth={strokeWidth} 
-                  fill="transparent" 
-                  strokeDasharray={circumference}
-                  strokeDashoffset={overallOffset}
-                  strokeLinecap="round"
-                />
-              </svg>
-              <div style={{
-                position: 'absolute', top: 0, left: 0, width: '130px', height: '130px',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
-              }}>
-                <span style={{ fontSize: '28px', fontWeight: '800', fontFamily: 'var(--font-heading)' }}>
-                  {session.overallScore}%
-                </span>
-                <span className="score-lbl" style={{ fontSize: '9px', marginTop: '-2px' }}>Overall</span>
-              </div>
+        {/* Score Index Columns */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+          <div className="md:col-span-5 p-6 glass-card border border-border-dark flex flex-col sm:flex-row items-center gap-6 justify-center">
+            <div className="progress-circle shadow-md glow-primary flex-shrink-0" style={{ '--progress': session.overallScore || 0 }}>
+              <span className="progress-text">{session.overallScore || 0}%</span>
             </div>
-            <div>
-              <h3 style={{ fontSize: '18px', marginBottom: '4px' }}>Interview Score</h3>
-              <p style={{ color: 'hsl(var(--text-muted))', fontSize: '13px', lineHeight: '1.4' }}>
-                Your overall score matches standard recruiter benchmarks for <strong>{session.jobRole}</strong>.
-              </p>
+            <div className="space-y-1 text-center sm:text-left">
+              <h3 className="font-heading font-bold text-base text-text-main">Cumulative Performance</h3>
+              <p className="text-xs text-text-muted leading-relaxed">Your overall rating meets industry standard benchmarks for this role.</p>
             </div>
           </div>
 
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '20px', padding: '24px' }}>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '14px', fontWeight: '600' }}>
+          <div className="md:col-span-7 p-6 glass-card border border-border-dark flex flex-col justify-center gap-5">
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-semibold text-text-main">
                 <span>Technical Proficiency</span>
-                <span>{session.technicalScore}%</span>
+                <span style={{ color: getStrokeColor(session.technicalScore) }}>{session.technicalScore}%</span>
               </div>
-              <div style={{ height: '8px', backgroundColor: 'hsl(var(--border-color))', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%',
-                  width: `${session.technicalScore}%`,
-                  backgroundColor: getStrokeColor(session.technicalScore),
-                  borderRadius: '4px',
-                  transition: 'width 1s ease'
-                }} />
+              <div className="h-2 bg-surface border border-border-dark rounded-full overflow-hidden">
+                <div 
+                  className="h-full rounded-full transition-all duration-1000" 
+                  style={{ width: `${session.technicalScore}%`, backgroundColor: getStrokeColor(session.technicalScore) }}
+                />
               </div>
             </div>
 
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '14px', fontWeight: '600' }}>
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs font-semibold text-text-main">
                 <span>Communication & Clarity</span>
-                <span>{session.communicationScore}%</span>
+                <span style={{ color: getStrokeColor(session.communicationScore) }}>{session.communicationScore}%</span>
               </div>
-              <div style={{ height: '8px', backgroundColor: 'hsl(var(--border-color))', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%',
-                  width: `${session.communicationScore}%`,
-                  backgroundColor: getStrokeColor(session.communicationScore),
-                  borderRadius: '4px',
-                  transition: 'width 1s ease'
-                }} />
+              <div className="h-2 bg-surface border border-border-dark rounded-full overflow-hidden">
+                <div 
+                  className="h-full rounded-full transition-all duration-1000" 
+                  style={{ width: `${session.communicationScore}%`, backgroundColor: getStrokeColor(session.communicationScore) }}
+                />
               </div>
             </div>
           </div>
         </div>
 
         {/* Strengths & Weaknesses Panel */}
-        <div className="report-grid" style={{ marginBottom: '32px' }}>
-          <div className="card" style={{ borderTop: '4px solid hsl(var(--success))' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <UserCheck size={20} className="text-success" />
-              <h3 style={{ fontSize: '18px' }}>Key Strengths</h3>
-            </div>
-            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="p-6 glass-card border border-border-dark space-y-4">
+            <h3 className="font-heading font-bold text-base text-green-400 flex items-center gap-2">
+              <UserCheck size={18} />
+              <span>Key Strengths</span>
+            </h3>
+            <ul className="space-y-2.5">
               {session.strengths.map((str, idx) => (
-                <li key={idx} style={{ display: 'flex', gap: '8px', fontSize: '14px', lineHeight: '1.4' }}>
-                  <span className="text-success" style={{ fontWeight: 'bold' }}>✓</span>
+                <li key={idx} className="flex gap-2.5 text-xs text-text-muted leading-relaxed">
+                  <span className="text-green-400 font-bold flex-shrink-0">✓</span>
                   <span>{str}</span>
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="card" style={{ borderTop: '4px solid hsl(var(--danger))' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <AlertCircle size={20} className="text-danger" />
-              <h3 style={{ fontSize: '18px' }}>Identified Gaps</h3>
-            </div>
-            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div className="p-6 glass-card border border-border-dark space-y-4">
+            <h3 className="font-heading font-bold text-base text-red-400 flex items-center gap-2">
+              <AlertCircle size={18} />
+              <span>Identified Gaps</span>
+            </h3>
+            <ul className="space-y-2.5">
               {session.weaknesses.map((weak, idx) => (
-                <li key={idx} style={{ display: 'flex', gap: '8px', fontSize: '14px', lineHeight: '1.4' }}>
-                  <span className="text-danger" style={{ fontWeight: 'bold' }}>⚠</span>
+                <li key={idx} className="flex gap-2.5 text-xs text-text-muted leading-relaxed">
+                  <span className="text-red-400 font-bold flex-shrink-0">⚠</span>
                   <span>{weak}</span>
                 </li>
               ))}
@@ -594,25 +554,16 @@ export default function MockInterview() {
           </div>
         </div>
 
-        {/* Lacking Skills Panel */}
+        {/* Lacking Skills tags */}
         {session.lackingSkills && session.lackingSkills.length > 0 && (
-          <div className="card" style={{ borderTop: '4px solid hsl(var(--warning))', marginBottom: '32px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <TrendingUp size={20} style={{ color: 'hsl(var(--warning))' }} />
-              <h3 style={{ fontSize: '18px' }}>Skills to Develop / Lacking Skills</h3>
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+          <div className="p-6 glass-card border border-border-dark space-y-4">
+            <h3 className="font-heading font-bold text-base text-amber-400 flex items-center gap-2">
+              <TrendingUp size={18} />
+              <span>Core Gaps / Key Skill Gaps</span>
+            </h3>
+            <div className="flex flex-wrap gap-2">
               {session.lackingSkills.map((skill, idx) => (
-                <span key={idx} className="skill-severity" style={{
-                  backgroundColor: 'hsl(var(--warning-light))',
-                  color: 'hsl(var(--warning))',
-                  fontWeight: '600',
-                  padding: '6px 14px',
-                  borderRadius: '20px',
-                  fontSize: '13px',
-                  border: '1px solid hsl(var(--warning) / 0.2)',
-                  textTransform: 'none'
-                }}>
+                <span key={idx} className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 border border-amber-500/20 text-amber-400">
                   {skill}
                 </span>
               ))}
@@ -620,85 +571,85 @@ export default function MockInterview() {
           </div>
         )}
 
-        {/* Recommendations Roadmap */}
-        <div className="card" style={{ borderTop: '4px solid hsl(var(--primary))', marginBottom: '32px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <BookOpen size={20} className="text-primary" />
-            <h3 style={{ fontSize: '18px' }}>Actionable Learning Recommendations</h3>
-          </div>
-          <div className="skill-gaps-list">
+        {/* Recommendations */}
+        <div className="p-6 glass-card border border-border-dark space-y-4">
+          <h3 className="font-heading font-bold text-base text-primary flex items-center gap-2">
+            <BookOpen size={18} />
+            <span>Actionable Learning Roadmap</span>
+          </h3>
+          <div className="space-y-3">
             {session.recommendations.map((rec, idx) => (
-              <div key={idx} className="skill-gap-item" style={{ border: '1px solid hsl(var(--border-color))', background: 'hsl(var(--bg-app))', margin: '4px 0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{
-                    width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'hsl(var(--primary-light))',
-                    color: 'hsl(var(--primary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px'
-                  }}>{idx + 1}</span>
-                  <p style={{ fontSize: '14px', fontWeight: '500' }}>{rec}</p>
-                </div>
+              <div key={idx} className="flex gap-3 items-center p-3.5 rounded-lg border border-border-dark bg-surface/30">
+                <span className="w-6 h-6 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold text-xs flex-shrink-0">
+                  {idx + 1}
+                </span>
+                <p className="text-xs text-text-main font-medium">{rec}</p>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Transcript Accordion */}
-        <div className="history-section">
-          <h3>Full Interview Transcript</h3>
-          <div className="reports-history-list">
+        {/* Transcript Panel Accordion */}
+        <div className="space-y-4">
+          <h3 className="font-heading font-bold text-lg text-text-main">Full Interview Transcript</h3>
+          <div className="space-y-3">
             {session.questions.map((q, idx) => {
               const isOpen = expandedQuestion === idx;
               return (
-                <div key={idx} className="card" style={{ padding: '16px 24px', cursor: 'pointer' }} onClick={() => setExpandedQuestion(isOpen ? null : idx)}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{
-                        fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', padding: '2px 8px', borderRadius: '4px',
-                        backgroundColor: q.category === 'technical' ? 'hsl(var(--primary-light))' : q.category === 'behavioral' ? 'hsl(var(--success-light))' : 'rgba(280, 80%, 95%, 0.15)',
-                        color: q.category === 'technical' ? 'hsl(var(--primary))' : q.category === 'behavioral' ? 'hsl(var(--success))' : 'hsla(280, 80%, 45%, 1)'
-                      }}>
+                <div key={idx} className="border border-border-dark rounded-lg overflow-hidden bg-surface/30 hover:bg-surface/50 transition-colors">
+                  <button 
+                    className="w-full flex items-center justify-between p-4 text-left font-semibold text-sm text-text-main gap-4 cursor-pointer" 
+                    onClick={() => setExpandedQuestion(isOpen ? null : idx)}
+                  >
+                    <div className="flex flex-wrap items-center gap-2.5 min-w-0">
+                      <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${
+                        q.category === 'technical' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-green-500/10 border border-green-500/20 text-green-400'
+                      }`}>
                         {q.category}
                       </span>
-                      <h4 style={{ fontSize: '16px', margin: 0 }}>Q{idx + 1}: {q.topic || 'General concept'}</h4>
+                      <h4 className="text-xs text-text-main truncate">Q{idx + 1}: {q.topic || 'Core Concept'}</h4>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <span style={{ fontSize: '15px', fontWeight: '800', color: getStrokeColor(q.score) }}>
+                    <div className="flex items-center gap-4 flex-shrink-0">
+                      <span className="text-xs font-bold" style={{ color: getStrokeColor(q.score) }}>
                         Score: {q.score}%
                       </span>
-                      {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                      {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </div>
-                  </div>
+                  </button>
 
-                  <div 
-                    className={`animate-fade-in history-details-panel ${isOpen ? 'is-open' : ''}`}
-                    style={{ 
-                      marginTop: '20px', 
-                      borderTop: '1px solid hsl(var(--border-color))', 
-                      paddingTop: '16px', 
-                      cursor: 'default',
-                      display: isOpen ? 'block' : 'none'
-                    }} 
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div style={{ marginBottom: '16px' }}>
-                      <p style={{ fontSize: '12px', textTransform: 'uppercase', color: 'hsl(var(--text-muted))', fontWeight: 'bold' }}>Question</p>
-                      <p style={{ fontSize: '15px', fontWeight: '600', marginTop: '4px' }}>{q.question}</p>
-                    </div>
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0 }}
+                        animate={{ height: "auto" }}
+                        exit={{ height: 0 }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                      >
+                        <div className="p-4 border-t border-border-dark bg-background/40 space-y-4 text-xs">
+                          <div className="space-y-1">
+                            <span className="font-bold text-[9px] uppercase text-text-muted tracking-wider block">Question prompt</span>
+                            <p className="text-text-main font-semibold">{q.question}</p>
+                          </div>
+                          
+                          <div className="p-3 bg-surface/30 rounded border border-border-dark space-y-1">
+                            <span className="font-bold text-[9px] uppercase text-text-muted tracking-wider block">Your transcribed answer</span>
+                            <p className="text-text-main font-medium italic">"{q.userAnswer || 'No response provided.'}"</p>
+                          </div>
 
-                    <div style={{ marginBottom: '16px', backgroundColor: 'hsl(var(--bg-app))', padding: '12px', borderRadius: '6px' }}>
-                      <p style={{ fontSize: '12px', textTransform: 'uppercase', color: 'hsl(var(--text-muted))', fontWeight: 'bold' }}>Your Answer</p>
-                      <p style={{ fontSize: '14px', marginTop: '4px', fontStyle: 'italic' }}>"{q.userAnswer || 'No answer provided.'}"</p>
-                    </div>
+                          <div className="border-l-2 border-primary pl-3 space-y-1">
+                            <span className="font-bold text-[9px] uppercase text-primary tracking-wider block">Mentor critique feedback</span>
+                            <p className="text-text-muted leading-relaxed">{q.feedback}</p>
+                          </div>
 
-                    <div style={{ marginBottom: '16px', borderLeft: '4px solid hsl(var(--primary))', paddingLeft: '12px' }}>
-                      <p style={{ fontSize: '12px', textTransform: 'uppercase', color: 'hsl(var(--primary))', fontWeight: 'bold' }}>AI Evaluation Feedback</p>
-                      <p style={{ fontSize: '14px', marginTop: '4px', lineHeight: '1.4' }}>{q.feedback}</p>
-                    </div>
-
-                    <div style={{ borderLeft: '4px solid hsl(var(--success))', paddingLeft: '12px', backgroundColor: 'hsl(var(--success-light) / 0.1)', padding: '12px', borderRadius: '6px' }}>
-                      <p style={{ fontSize: '12px', textTransform: 'uppercase', color: 'hsl(var(--success))', fontWeight: 'bold' }}>Ideal Benchmark Answer</p>
-                      <p style={{ fontSize: '14px', marginTop: '4px', lineHeight: '1.4' }}>{q.idealAnswer}</p>
-                    </div>
-                  </div>
+                          <div className="border-l-2 border-green-500 pl-3 space-y-1">
+                            <span className="font-bold text-[9px] uppercase text-green-400 tracking-wider block">Suggested benchmark answer</span>
+                            <p className="text-text-muted leading-relaxed italic">{q.idealAnswer}</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               );
             })}
@@ -713,232 +664,241 @@ export default function MockInterview() {
   // ==========================================
   if (session && session.status !== 'completed') {
     const currentQuestion = session.questions[currentQuestionIndex];
-    // Dynamic sequential questionnaire rounds (total 3)
     const totalQuestions = 3;
     const progressPercent = Math.min(((currentQuestionIndex + (evaluationResult ? 1.0 : 0)) / totalQuestions) * 100, 100);
 
     return (
-      <div className="dashboard-page animate-fade-in" style={{ maxWidth: '720px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+      <div className="space-y-6 max-w-3xl mx-auto pb-16">
+        {/* Active Header */}
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <h4 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'hsl(var(--text-muted))' }}>
-              Conducting Mock Interview
-            </h4>
-            <h2 style={{ fontSize: '20px', margin: '4px 0 0 0' }}>{session.jobRole}</h2>
+            <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Active Simulator Session</span>
+            <h2 className="text-xl font-heading font-extrabold text-text-main mt-0.5">{session.jobRole}</h2>
           </div>
-          <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={resetInterview}>
+          <button 
+            className="px-3 py-1.5 rounded-lg bg-surface hover:bg-surface/80 border border-border-dark text-xs font-semibold text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+            onClick={resetInterview}
+          >
             Quit Interview
           </button>
         </div>
 
         {/* Global Progress Bar */}
-        <div style={{ height: '6px', backgroundColor: 'hsl(var(--border-color))', borderRadius: '3px', marginBottom: '24px', overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${progressPercent}%`, backgroundColor: 'hsl(var(--primary))', transition: 'width 0.3s ease' }} />
+        <div className="h-1.5 bg-surface border border-border-dark rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-primary transition-all duration-300 rounded-full" 
+            style={{ width: `${progressPercent}%` }}
+          />
         </div>
 
-        {/* Main Q&A Card */}
-        <div className="card" style={{ padding: '32px', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <span style={{
-              fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', padding: '2px 8px', borderRadius: '4px',
-              backgroundColor: currentQuestion.category === 'technical' ? 'hsl(var(--primary-light))' : currentQuestion.category === 'behavioral' ? 'hsl(var(--success-light))' : 'rgba(280, 80%, 95%, 0.15)',
-              color: currentQuestion.category === 'technical' ? 'hsl(var(--primary))' : currentQuestion.category === 'behavioral' ? 'hsl(var(--success))' : 'hsla(280, 80%, 45%, 1)'
-            }}>
-              {currentQuestion.category} question
+        {/* Interviewer holographic chat bubble */}
+        <div className="p-6 md:p-8 glass-card border border-border-dark space-y-6 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 to-transparent pointer-events-none"></div>
+          
+          <div className="flex items-center justify-between gap-4">
+            <span className={`px-2.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${
+              currentQuestion.category === 'technical' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-green-500/10 border border-green-500/20 text-green-400'
+            }`}>
+              {currentQuestion.category} Question
             </span>
-            <span style={{ fontSize: '13px', color: 'hsl(var(--text-muted))', fontWeight: '600' }}>
-              Question {currentQuestionIndex + 1}
+            <span className="text-xs font-semibold text-text-muted">
+              Question {currentQuestionIndex + 1} of {totalQuestions}
             </span>
           </div>
 
-          <h3 style={{ fontSize: '20px', fontWeight: '700', lineHeight: '1.4', marginBottom: '24px' }}>
-            {currentQuestion.question}
-          </h3>
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-accent text-white flex items-center justify-center font-heading font-extrabold text-sm flex-shrink-0 shadow-md">
+              AI
+            </div>
+            <div className="space-y-1">
+              <span className="text-[9px] uppercase font-bold text-text-muted tracking-wider block">AI Interviewer agent</span>
+              <p className="text-base md:text-lg font-heading font-bold text-text-main leading-relaxed">
+                {currentQuestion.question}
+              </p>
+            </div>
+          </div>
 
-          {/* Setup User Answer */}
+          {/* User Input Intake */}
           {!evaluationResult ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div className="space-y-5 pt-6 border-t border-border-dark">
               
-              {/* Answer Type Toggler */}
-              <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid hsl(var(--border-color))', paddingBottom: '12px' }}>
+              {/* Selector toggler */}
+              <div className="flex gap-2 border-b border-border-dark pb-4">
                 <button
                   type="button"
-                  className={`btn-secondary ${answerType === 'audio' ? 'active' : ''}`}
-                  style={{
-                    padding: '8px 16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', borderRadius: '20px',
-                    backgroundColor: answerType === 'audio' ? 'hsl(var(--primary-light))' : '',
-                    color: answerType === 'audio' ? 'hsl(var(--primary))' : '',
-                    borderColor: answerType === 'audio' ? 'hsl(var(--primary))' : ''
-                  }}
+                  className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 cursor-pointer border transition-all ${
+                    answerType === 'audio' 
+                      ? 'bg-primary/10 border-primary text-primary shadow-sm' 
+                      : 'border-border-dark bg-surface/30 text-text-muted hover:text-text-main'
+                  }`}
                   onClick={() => { setAnswerType('audio'); setError(''); }}
                 >
-                  <Mic size={16} />
+                  <Mic size={14} />
                   <span>Speak Response (Voice)</span>
                 </button>
                 <button
                   type="button"
-                  className={`btn-secondary ${answerType === 'text' ? 'active' : ''}`}
-                  style={{
-                    padding: '8px 16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', borderRadius: '20px',
-                    backgroundColor: answerType === 'text' ? 'hsl(var(--primary-light))' : '',
-                    color: answerType === 'text' ? 'hsl(var(--primary))' : '',
-                    borderColor: answerType === 'text' ? 'hsl(var(--primary))' : ''
-                  }}
+                  className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 cursor-pointer border transition-all ${
+                    answerType === 'text' 
+                      ? 'bg-primary/10 border-primary text-primary shadow-sm' 
+                      : 'border-border-dark bg-surface/30 text-text-muted hover:text-text-main'
+                  }`}
                   onClick={() => { setAnswerType('text'); setError(''); }}
                 >
-                  <Keyboard size={16} />
+                  <Keyboard size={14} />
                   <span>Type Response (Text)</span>
                 </button>
               </div>
 
-              {/* Input Intake Layouts */}
+              {/* Text Input */}
               {answerType === 'text' ? (
-                <div className="form-group">
-                  <label className="section-label">Type Your Response</label>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-text-main block">Type Your Response</label>
                   <textarea
-                    rows={6}
-                    placeholder="Type your answer here..."
+                    rows={5}
+                    placeholder="Provide your detailed answer..."
                     value={answer}
                     onChange={(e) => setAnswer(e.target.value)}
-                    style={{ width: '100%', padding: '14px', borderRadius: '8px', border: '1px solid hsl(var(--border-color))', fontSize: '14px' }}
+                    className="w-full px-4 py-3 rounded-lg bg-surface border border-border-dark text-sm text-text-main placeholder-text-muted/40 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all resize-none"
                   />
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '24px', backgroundColor: 'hsl(var(--bg-app))', borderRadius: '8px', border: '1px solid hsl(var(--border-color))' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                /* Voice Input & Waveforms */
+                <div className="flex flex-col items-center justify-center p-6 rounded-lg bg-surface/30 border border-border-dark space-y-4">
+                  <div className="flex items-center gap-4">
                     {!isRecording ? (
                       <button
                         type="button"
-                        className="btn-primary"
+                        className="w-14 h-14 rounded-full bg-primary hover:bg-primary-hover text-white flex items-center justify-center shadow-lg shadow-primary/20 cursor-pointer"
                         onClick={startRecording}
-                        style={{ width: '56px', height: '56px', borderRadius: '50%', padding: 0 }}
                       >
-                        <Mic size={24} />
+                        <Mic size={22} />
                       </button>
                     ) : (
                       <button
                         type="button"
-                        className="btn-primary"
+                        className="w-14 h-14 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-lg shadow-red-500/20 cursor-pointer spinner"
                         onClick={stopRecording}
-                        style={{ width: '56px', height: '56px', borderRadius: '50%', padding: 0, backgroundColor: 'hsl(var(--danger))', boxShadow: '0 4px 12px hsla(var(--danger), 0.2)' }}
                       >
-                        <Square size={24} />
+                        <Square size={20} />
                       </button>
                     )}
 
                     {isRecording && (
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '16px', fontWeight: 'bold', color: 'hsl(var(--danger))', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'hsl(var(--danger))', display: 'inline-block' }} className="animate-pulse" />
-                          Recording... {formatTimer(recordingSeconds)}
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold text-red-400 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-red-400 inline-block animate-pulse" />
+                          Recording: {formatTimer(recordingSeconds)}
                         </span>
-                        <div style={{ display: 'flex', gap: '3px', marginTop: '6px' }}>
-                          <span style={{ width: '3px', height: '15px', backgroundColor: 'hsl(var(--danger))', display: 'inline-block' }} className="animate-pulse" />
-                          <span style={{ width: '3px', height: '20px', backgroundColor: 'hsl(var(--danger))', display: 'inline-block', animationDelay: '0.2s' }} className="animate-pulse" />
-                          <span style={{ width: '3px', height: '12px', backgroundColor: 'hsl(var(--danger))', display: 'inline-block', animationDelay: '0.4s' }} className="animate-pulse" />
-                          <span style={{ width: '3px', height: '24px', backgroundColor: 'hsl(var(--danger))', display: 'inline-block', animationDelay: '0.1s' }} className="animate-pulse" />
+                        
+                        {/* Audio Waveforms bar indicator */}
+                        <div className="flex gap-1 items-end h-6 mt-1">
+                          <span className="w-1 h-3 bg-red-400 rounded animate-pulse-glow" style={{ animationDelay: '0.1s' }} />
+                          <span className="w-1 h-5 bg-red-400 rounded animate-pulse-glow" style={{ animationDelay: '0.3s' }} />
+                          <span className="w-1 h-2 bg-red-400 rounded animate-pulse-glow" style={{ animationDelay: '0.5s' }} />
+                          <span className="w-1 h-6 bg-red-400 rounded animate-pulse-glow" style={{ animationDelay: '0.2s' }} />
+                          <span className="w-1 h-4 bg-red-400 rounded animate-pulse-glow" style={{ animationDelay: '0.4s' }} />
                         </div>
                       </div>
                     )}
                   </div>
 
                   {!isRecording && audioUrl && (
-                    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', width: '100%' }}>
-                      <span style={{ fontSize: '13px', fontWeight: '600', color: 'hsl(var(--success))' }}>✓ Audio recorded successfully</span>
-                      <audio src={audioUrl} controls style={{ width: '100%', maxWidth: '360px' }} />
+                    <div className="flex flex-col items-center gap-3 w-full animate-fade-in">
+                      <span className="text-xs font-semibold text-green-400 flex items-center gap-1">
+                        <CheckCircle size={14} />
+                        <span>Audio response captured successfully</span>
+                      </span>
+                      <audio src={audioUrl} controls className="w-full max-w-sm rounded" />
                       <button
                         type="button"
-                        className="btn-secondary"
+                        className="px-3 py-1.5 rounded-lg border border-red-500/20 text-red-400 text-xs font-semibold bg-red-500/5 hover:bg-red-500/10 transition-all cursor-pointer flex items-center gap-1.5"
                         onClick={deleteRecording}
-                        style={{ padding: '6px 12px', fontSize: '12px', color: 'hsl(var(--danger))', borderColor: 'hsla(var(--danger), 0.2)' }}
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={12} />
                         <span>Delete and Re-record</span>
                       </button>
                     </div>
                   )}
 
                   {!isRecording && !audioUrl && (
-                    <span style={{ fontSize: '13px', color: 'hsl(var(--text-muted))' }}>Click the microphone button to start speaking</span>
+                    <span className="text-xs text-text-muted">Click the microphone button to start speaking</span>
                   )}
                 </div>
               )}
 
               {error && (
-                <div className="auth-error-alert">
-                  <AlertCircle size={18} />
+                <div className="flex items-center gap-2 p-3.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+                  <AlertCircle size={16} />
                   <span>{error}</span>
                 </div>
               )}
 
               <button
-                className="btn-primary"
+                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-lg shadow-primary/20 transition-all cursor-pointer disabled:opacity-50"
                 onClick={handleSubmitAnswer}
                 disabled={evaluating || (answerType === 'text' ? !answer.trim() : !audioBlob)}
-                style={{ alignSelf: 'flex-start' }}
               >
                 {evaluating ? (
                   <>
-                    <RefreshCw className="spinner" size={16} />
+                    <RefreshCw className="spinner" size={14} />
                     <span>Evaluating Response & Transcribing...</span>
                   </>
                 ) : (
                   <>
-                    <span>Submit & Upload Response</span>
-                    <ArrowRight size={16} />
+                    <span>Submit Answer</span>
+                    <ArrowRight size={14} />
                   </>
                 )}
               </button>
             </div>
           ) : (
-            // Answer Submitted, show Immediate Evaluation
-            <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px', borderTop: '1px solid hsl(var(--border-color))', paddingTop: '24px' }}>
-              
-              {/* Spoken transcript if it was transcribed */}
+            /* Immediate Feedback layout */
+            <div className="space-y-6 pt-6 border-t border-border-dark animate-fade-in">
               {answerType === 'audio' && (
-                <div style={{ backgroundColor: 'hsl(var(--primary-light) / 0.3)', padding: '14px', borderRadius: '8px', borderLeft: '4px solid hsl(var(--primary))' }}>
-                  <p style={{ fontSize: '12px', textTransform: 'uppercase', color: 'hsl(var(--primary))', fontWeight: 'bold' }}>Spoken Transcript</p>
-                  <p style={{ fontSize: '14px', marginTop: '4px', fontStyle: 'italic' }}>
-                    "{answer}"
-                  </p>
+                <div className="p-3.5 bg-primary/5 border-l-2 border-primary rounded text-xs">
+                  <span className="font-bold text-[9px] uppercase text-primary tracking-wider block">Transcribed Answer</span>
+                  <p className="text-text-main italic font-medium mt-1">"{answer}"</p>
                 </div>
               )}
 
-              <div className={`skill-gap-item ${getScoreColorClass(evaluationResult.score)}`} style={{ padding: '16px', border: '1px solid transparent' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Award size={24} />
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: '15px' }}>Answer Score: {evaluationResult.score}/100</h4>
-                      <p style={{ margin: 0, fontSize: '12px', opacity: 0.8 }}>Evaluated immediately by the AI Mentor</p>
-                    </div>
-                  </div>
+              <div className={`p-4 rounded-lg border ${getScoreColorClass(evaluationResult.score)} text-xs font-semibold flex items-center gap-2.5`}>
+                <Award size={20} />
+                <div>
+                  <h4 className="text-sm font-bold">Answer Score: {evaluationResult.score}/100</h4>
+                  <p className="opacity-75 font-normal mt-0.5">Evaluated immediately by the AI Mentor Agent</p>
                 </div>
               </div>
 
-              <div style={{ borderLeft: '4px solid hsl(var(--primary))', paddingLeft: '14px' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: 'hsl(var(--primary))', marginBottom: '6px' }}>Feedback</h4>
-                <p style={{ fontSize: '14px', color: 'hsl(var(--text-main))', lineHeight: '1.5' }}>{evaluationResult.feedback}</p>
+              <div className="border-l-2 border-primary pl-3 space-y-1 text-xs">
+                <span className="font-bold text-[9px] uppercase text-primary tracking-wider block font-sans">Critique Feedback</span>
+                <p className="text-text-muted leading-relaxed">{evaluationResult.feedback}</p>
               </div>
 
-              <div style={{ backgroundColor: 'hsl(var(--bg-app))', borderRadius: '8px', padding: '16px' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: 'hsl(var(--text-main))', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Sparkles size={16} className="text-success" /> Benchmark Answer
+              <div className="p-4 rounded-lg bg-surface/30 border border-border-dark text-xs space-y-1.5">
+                <h4 className="font-bold text-text-main flex items-center gap-1.5">
+                  <Sparkles size={14} className="text-green-400" />
+                  <span>Ideal Benchmark Answer</span>
                 </h4>
-                <p style={{ fontSize: '14px', color: 'hsl(var(--text-muted))', lineHeight: '1.5', fontStyle: 'italic' }}>
+                <p className="text-text-muted leading-relaxed italic">
                   "{evaluationResult.idealAnswer}"
                 </p>
               </div>
               
-              {/* Navigation buttons */}
-              <div style={{ marginTop: '16px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                <button className="btn-primary" onClick={handleNextQuestion}>
+              <div className="flex gap-3 pt-4">
+                <button 
+                  className="px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-lg shadow-primary/20 flex items-center gap-1.5 cursor-pointer"
+                  onClick={handleNextQuestion}
+                >
                   <span>Dynamic Next Question</span>
-                  <ArrowRight size={16} />
+                  <ArrowRight size={14} />
                 </button>
-                <button className="btn-secondary" onClick={handleFinishInterview} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span>Finish & Compile Final Report</span>
-                  <Sparkles size={16} />
+                <button 
+                  className="px-5 py-2.5 rounded-lg bg-surface hover:bg-surface/80 border border-border-dark text-xs font-semibold text-text-main flex items-center gap-1.5 transition-colors cursor-pointer"
+                  onClick={handleFinishInterview}
+                >
+                  <span>Compile Final Report</span>
+                  <Sparkles size={14} className="text-primary" />
                 </button>
               </div>
             </div>
@@ -952,109 +912,98 @@ export default function MockInterview() {
   // RENDER: SETUP SCREEN (Step 1)
   // ==========================================
   return (
-    <div className="upload-page animate-fade-in" style={{ maxWidth: '960px', margin: '0 auto' }}>
-      <div className="page-header">
-        <h1 style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Compass className="text-primary" size={36} />
-          AI Mock Interviews
+    <div className="space-y-8 max-w-4xl mx-auto pb-16">
+      <div className="text-center space-y-2">
+        <h1 className="text-3xl font-heading font-extrabold text-text-main tracking-tight flex items-center justify-center gap-2">
+          <Compass className="text-primary" size={32} />
+          <span>AI Mock Interviews</span>
         </h1>
-        <p className="subtitle">Practice job-specific interviews. Speak/record or type answers, get dynamic questioning, and receive full dashboards.</p>
+        <p className="text-text-muted text-sm max-w-xl mx-auto">Practice target job-specific loops. Speak voice answers or type inputs, receive dynamically adjusted questioning, and download performance reports.</p>
       </div>
 
       {error && (
-        <div className="auth-error-alert" style={{ marginBottom: '24px' }}>
+        <div className="flex items-center gap-2 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
           <AlertCircle size={18} />
           <span>{error}</span>
         </div>
       )}
 
-      <form onSubmit={handleStartInterview} className="upload-form-grid">
-        <div className="form-column">
-          <div className="form-group">
-            <label className="section-label">Resume Option *</label>
-            <span className="input-hint">Mock interviews can adapt to your resume or be general job profiles</span>
+      <form onSubmit={handleStartInterview} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* Left Column: Stored profile options */}
+        <div className="lg:col-span-6 space-y-6">
+          <div className="p-6 glass-card border border-border-dark space-y-4">
+            <div>
+              <label className="text-sm font-semibold text-text-main block">Resume Option *</label>
+              <p className="text-[11px] text-text-muted mt-0.5">Mock interviews can adapt questions specifically to your profile details</p>
+            </div>
 
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-              <button
-                type="button"
-                className={`btn-secondary ${resumeSource === 'none' ? 'active' : ''}`}
-                style={{
-                  flex: 1, padding: '10px', fontSize: '13px',
-                  backgroundColor: resumeSource === 'none' ? 'hsl(var(--primary-light))' : '',
-                  color: resumeSource === 'none' ? 'hsl(var(--primary))' : '',
-                  borderColor: resumeSource === 'none' ? 'hsl(var(--primary))' : ''
-                }}
-                onClick={() => { setResumeSource('none'); setFile(null); }}
-              >
-                No Resume
-              </button>
-              <button
-                type="button"
-                className={`btn-secondary ${resumeSource === 'saved' ? 'active' : ''}`}
-                style={{
-                  flex: 1, padding: '10px', fontSize: '13px',
-                  backgroundColor: resumeSource === 'saved' ? 'hsl(var(--primary-light))' : '',
-                  color: resumeSource === 'saved' ? 'hsl(var(--primary))' : '',
-                  borderColor: resumeSource === 'saved' ? 'hsl(var(--primary))' : ''
-                }}
-                onClick={() => {
-                  setResumeSource('saved');
-                  if (savedResumes.length > 0 && !selectedResumeId) {
-                    setSelectedResumeId(savedResumes[0]._id);
-                  }
-                }}
-              >
-                Stored Resume
-              </button>
-              <button
-                type="button"
-                className={`btn-secondary ${resumeSource === 'upload' ? 'active' : ''}`}
-                style={{
-                  flex: 1, padding: '10px', fontSize: '13px',
-                  backgroundColor: resumeSource === 'upload' ? 'hsl(var(--primary-light))' : '',
-                  color: resumeSource === 'upload' ? 'hsl(var(--primary))' : '',
-                  borderColor: resumeSource === 'upload' ? 'hsl(var(--primary))' : ''
-                }}
-                onClick={() => { setResumeSource('upload'); }}
-              >
-                Upload New
-              </button>
+            <div className="flex gap-2">
+              {['none', 'saved', 'upload'].map((source) => (
+                <button
+                  key={source}
+                  type="button"
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                    resumeSource === source
+                      ? 'bg-primary/10 border-primary text-primary shadow-sm'
+                      : 'border-border-dark bg-surface/30 text-text-muted hover:text-text-main'
+                  }`}
+                  onClick={() => {
+                    setResumeSource(source);
+                    if (source !== 'upload') setFile(null);
+                    if (source === 'saved' && savedResumes.length > 0 && !selectedResumeId) {
+                      setSelectedResumeId(savedResumes[0]._id);
+                    }
+                  }}
+                >
+                  {source === 'none' ? 'No Resume' : source === 'saved' ? 'Stored' : 'Upload New'}
+                </button>
+              ))}
             </div>
 
             {resumeSource === 'saved' && (
               resumesLoading ? (
-                <div className="loading-dropdown-box">
-                  <RefreshCw className="spinner" size={16} />
+                <div className="flex items-center gap-2 text-xs text-text-muted p-2 rounded-lg border border-border-dark bg-surface/30">
+                  <RefreshCw className="spinner" size={14} />
                   <span>Loading profiles...</span>
                 </div>
               ) : savedResumes.length === 0 ? (
-                <div style={{ padding: '12px', border: '1px solid hsl(var(--border-color))', borderRadius: '8px', textAlign: 'center', fontSize: '13px', color: 'hsl(var(--text-muted))' }}>
-                  No resumes saved. Please choose Upload New.
+                <div className="p-3 border border-border-dark rounded-lg text-center text-xs text-text-muted">
+                  No resumes saved. Please choose Stored or Upload New.
                 </div>
               ) : (
-                <select
-                  className="resume-dropdown-select"
-                  value={selectedResumeId}
-                  onChange={(e) => setSelectedResumeId(e.target.value)}
-                  style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid hsl(var(--border-color))' }}
-                >
-                  {savedResumes.map(r => (
-                    <option key={r._id} value={r._id}>
-                      💾 {r.filename}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    className="w-full px-3 py-2 rounded-lg bg-surface border border-border-dark text-xs text-text-main focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all cursor-pointer appearance-none"
+                    value={selectedResumeId}
+                    onChange={(e) => setSelectedResumeId(e.target.value)}
+                  >
+                    {savedResumes.map(r => (
+                      <option key={r._id} value={r._id}>
+                        💾 {r.filename}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted text-[10px]">
+                    ▼
+                  </div>
+                </div>
               )
             )}
 
             {resumeSource === 'upload' && (
               <div 
-                className={`dropzone-card card ${isDragOver ? 'dragover' : ''} ${file ? 'has-file' : ''}`}
+                className={`w-full min-h-[140px] rounded-xl border border-dashed flex flex-col items-center justify-center p-4 text-center cursor-pointer transition-all duration-300 relative ${
+                  isDragOver 
+                    ? 'border-primary bg-primary/5 shadow-lg shadow-primary/5' 
+                    : file 
+                      ? 'border-secondary/40 bg-secondary/5' 
+                      : 'border-border-dark hover:border-primary/40 bg-surface/30'
+                }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onClick={!file ? triggerFileSelect : undefined}
-                style={{ padding: '20px', cursor: 'pointer', textAlign: 'center', border: '2px dashed hsl(var(--border-color))' }}
               >
                 <input 
                   type="file" 
@@ -1065,84 +1014,88 @@ export default function MockInterview() {
                 />
                 
                 {file ? (
-                  <div className="file-info-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <FileText size={40} className="file-icon-color" style={{ color: 'hsl(var(--primary))' }} />
-                    <p className="file-name" style={{ fontSize: '13px', fontWeight: 'bold', margin: '8px 0' }}>{file.name}</p>
-                    <button type="button" className="btn-secondary remove-file-btn" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={(e) => { e.stopPropagation(); removeFile(); }}>
+                  <div className="flex flex-col items-center gap-2 w-full">
+                    <FileText size={32} className="text-secondary" />
+                    <p className="text-xs font-semibold text-text-main truncate max-w-[200px]">{file.name}</p>
+                    <button 
+                      type="button" 
+                      className="px-2 py-1 rounded bg-surface hover:bg-surface/80 border border-border-dark text-[9px] font-semibold text-red-400 transition-colors cursor-pointer" 
+                      onClick={(e) => { e.stopPropagation(); removeFile(); }}
+                    >
                       Remove
                     </button>
                   </div>
                 ) : (
-                  <div className="dropzone-prompt">
-                    <Upload size={32} className="upload-icon-color" style={{ margin: '0 auto 8px auto', color: 'hsl(var(--text-muted))' }} />
-                    <p style={{ fontSize: '13px', margin: 0 }}>Drag & Drop PDF or click to browse</p>
+                  <div className="flex flex-col items-center gap-1.5">
+                    <Upload size={24} className="text-text-muted" />
+                    <p className="text-xs text-text-main">Drag & Drop PDF or click to browse</p>
                   </div>
                 )}
               </div>
             )}
 
             {resumeSource === 'none' && (
-              <div className="saved-resume-selected-card card" style={{ padding: '16px', display: 'flex', gap: '12px', background: 'hsl(var(--bg-app))' }}>
-                <Smile size={24} className="text-primary" />
-                <div style={{ fontSize: '13px' }}>
-                  <p style={{ fontWeight: '600', margin: 0 }}>General Profile Match Mode</p>
-                  <p className="text-muted" style={{ margin: '2px 0 0 0' }}>AI will focus questions strictly on the target job role without extracting resume data.</p>
+              <div className="p-4 glass-card border border-border-dark flex items-start gap-3 animate-fade-in relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 to-transparent pointer-events-none"></div>
+                <Smile size={22} className="text-primary flex-shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="font-semibold text-xs text-text-main">General Profile Match Mode</p>
+                  <p className="text-[10px] text-text-muted leading-relaxed">AI will focus questions strictly on the target job role without parsing resume details.</p>
                 </div>
               </div>
             )}
           </div>
-
         </div>
 
-        <div className="form-column">
-          <div className="form-group">
-            <label htmlFor="jobRole" className="section-label">Target Job Role *</label>
-            <span className="input-hint">Type the specific job role you are interviewing for</span>
-            <input
-              id="jobRole"
-              type="text"
-              placeholder="e.g. React Developer, Data Scientist, Product Manager"
-              value={jobRole}
-              onChange={(e) => setJobRole(e.target.value)}
-              required
-              style={{ width: '100%', padding: '12px', borderRadius: '6px', border: '1px solid hsl(var(--border-color))', fontSize: '14px' }}
-            />
+        {/* Right Column: Target role inputs */}
+        <div className="lg:col-span-6 space-y-6">
+          <div className="p-6 glass-card border border-border-dark space-y-5">
+            <div className="space-y-1.5">
+              <label htmlFor="jobRole" className="text-sm font-semibold text-text-main">Target Job Role *</label>
+              <p className="text-[11px] text-text-muted">Type the specific job role you are interviewing for</p>
+              <input
+                id="jobRole"
+                type="text"
+                placeholder="e.g. React Developer, Data Scientist, Product Manager"
+                value={jobRole}
+                onChange={(e) => setJobRole(e.target.value)}
+                required
+                className="w-full px-4 py-2.5 rounded-lg bg-surface border border-border-dark text-sm text-text-main placeholder-text-muted/40 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+              />
 
-            <div style={{ marginTop: '12px' }}>
-              <span className="input-hint" style={{ fontSize: '11px', display: 'block', marginBottom: '6px' }}>Quick Select Presets:</span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {presetRoles.map(preset => (
-                  <button
-                    key={preset}
-                    type="button"
-                    className="btn-secondary"
-                    style={{ padding: '6px 12px', fontSize: '11px', borderRadius: '20px' }}
-                    onClick={() => setJobRole(preset)}
-                  >
-                    {preset}
-                  </button>
-                ))}
+              <div className="pt-2 space-y-1.5">
+                <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Quick Select Presets:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {presetRoles.map(preset => (
+                    <button
+                      key={preset}
+                      type="button"
+                      className="px-2.5 py-1 rounded-full bg-surface hover:bg-surface/80 border border-border-dark text-[10px] text-text-muted hover:text-text-main transition-colors cursor-pointer"
+                      onClick={() => setJobRole(preset)}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
 
-          <div style={{ marginTop: '24px' }}>
             <button
               type="submit"
-              className="btn-primary"
-              style={{ width: '100%', padding: '14px', fontSize: '15px', display: 'flex', gap: '8px', justifyContent: 'center' }}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-semibold shadow-lg shadow-primary/20 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               disabled={!jobRole.trim() || (resumeSource === 'upload' && !file)}
             >
-              <Sparkles size={18} />
+              <Sparkles size={16} />
               <span>Generate AI Interview Questions</span>
             </button>
           </div>
 
-          <div className="info-helper-box" style={{ marginTop: '20px' }}>
-            <Info size={16} />
-            <p style={{ fontSize: '12px' }}>Planner and Interview Agents take around 10-15 seconds to generate tailored concept scenarios.</p>
+          <div className="flex items-start gap-2.5 p-4 rounded-xl bg-surface/30 border border-border-dark text-xs text-text-muted leading-relaxed">
+            <Info className="text-primary flex-shrink-0 mt-0.5" size={14} />
+            <p>Planner and Interview Agents take around 10-15 seconds to generate custom behavioral and technical scenarios.</p>
           </div>
         </div>
+
       </form>
     </div>
   );

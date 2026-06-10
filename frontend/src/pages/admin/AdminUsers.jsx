@@ -4,7 +4,6 @@ import {
   Search, ShieldAlert, UserCheck, Trash2, Eye, RefreshCw, 
   X, AlertCircle, CheckCircle, ChevronLeft, ChevronRight 
 } from 'lucide-react';
-import '../../admin.css';
 
 export default function AdminUsers({ currentUser }) {
   const [users, setUsers] = useState([]);
@@ -40,14 +39,13 @@ export default function AdminUsers({ currentUser }) {
     }
   };
 
-  // Trigger search on filter changes or page changes
   useEffect(() => {
     fetchUsers();
   }, [page, roleFilter, statusFilter]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    setPage(1); // Reset page to 1 for new search
+    setPage(1); 
     fetchUsers();
   };
 
@@ -106,154 +104,157 @@ export default function AdminUsers({ currentUser }) {
   };
 
   return (
-    <div className="admin-container">
-      <div className="admin-header">
-        <div>
-          <h1>User Management</h1>
-          <p>Suspend, activate, delete, and inspect registered system accounts</p>
-        </div>
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-heading font-extrabold text-text-main tracking-tight">User Management</h1>
+        <p className="text-text-muted text-sm mt-1">Suspend, activate, delete, and inspect registered system accounts</p>
       </div>
 
       {error && (
-        <div className="auth-error-alert" style={{ marginBottom: '20px' }}>
+        <div className="flex items-center gap-2 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
           <AlertCircle size={18} />
           <span>{error}</span>
         </div>
       )}
 
       {success && (
-        <div className="auth-success-alert" style={{ marginBottom: '20px' }}>
-          <CheckCircle size={18} style={{ marginRight: '8px' }} />
+        <div className="flex items-center gap-2 p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm">
+          <CheckCircle size={18} />
           <span>{success}</span>
         </div>
       )}
 
-      {/* Filter and Search Bar */}
-      <div className="table-card" style={{ padding: '16px 20px', borderBottom: 'none' }}>
-        <form onSubmit={handleSearchSubmit} className="filter-bar">
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1 }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', color: 'var(--admin-text-muted)' }} />
+      {/* Filter and Search Bar Card */}
+      <div className="p-4 glass-card border border-border-dark">
+        <form onSubmit={handleSearchSubmit} className="flex flex-wrap items-center gap-4">
+          <div className="relative flex items-center flex-1 min-w-[240px]">
+            <Search className="absolute left-3.5 text-text-muted" size={16} />
             <input 
               type="text" 
               placeholder="Search by name or email..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="search-input-field"
-              style={{ paddingLeft: '36px', width: '100%' }}
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-surface border border-border-dark text-xs text-text-main placeholder-text-muted/30 focus:outline-none focus:border-primary transition-all"
             />
           </div>
 
-          <select 
-            value={roleFilter} 
-            onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
-            className="select-dropdown-field"
-          >
-            <option value="">All Roles</option>
-            <option value="admin">Admin Only</option>
-            <option value="user">User Only</option>
-          </select>
+          <div className="relative">
+            <select 
+              value={roleFilter} 
+              onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
+              className="px-3.5 py-2.5 rounded-lg bg-surface border border-border-dark text-xs text-text-main focus:outline-none cursor-pointer appearance-none pr-8 min-w-[120px]"
+            >
+              <option value="">All Roles</option>
+              <option value="admin">Admin Only</option>
+              <option value="user">User Only</option>
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted text-[10px]">▼</div>
+          </div>
 
-          <select 
-            value={statusFilter} 
-            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-            className="select-dropdown-field"
-          >
-            <option value="">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="suspended">Suspended</option>
-          </select>
+          <div className="relative">
+            <select 
+              value={statusFilter} 
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+              className="px-3.5 py-2.5 rounded-lg bg-surface border border-border-dark text-xs text-text-main focus:outline-none cursor-pointer appearance-none pr-8 min-w-[120px]"
+            >
+              <option value="">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted text-[10px]">▼</div>
+          </div>
 
-          <button type="submit" className="pagination-btn" style={{ padding: '8px 16px' }} disabled={loading}>
+          <button 
+            type="submit" 
+            className="px-4 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-semibold shadow-md transition-colors cursor-pointer"
+            disabled={loading}
+          >
             Search
           </button>
         </form>
       </div>
 
-      {/* User Records Table */}
-      <div className="table-card">
-        <div className="table-wrapper">
+      {/* User Records Table Card */}
+      <div className="glass-card border border-border-dark overflow-hidden">
+        <div className="overflow-x-auto w-full">
           {loading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '60px' }}>
-              <RefreshCw className="spinner" size={28} style={{ color: 'var(--admin-primary)' }} />
-              <p style={{ marginLeft: '12px', color: 'var(--admin-text-muted)', fontWeight: 600 }}>Loading users...</p>
+            <div className="flex flex-col items-center justify-center p-12 gap-3 text-text-muted">
+              <RefreshCw className="spinner text-primary" size={28} />
+              <p className="text-xs font-semibold">Loading users...</p>
             </div>
           ) : users.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--admin-text-muted)' }}>
+            <div className="text-center p-12 text-xs text-text-muted italic">
               No accounts matching search criteria were found.
             </div>
           ) : (
-            <table className="admin-table">
+            <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr>
-                  <th>Full Name</th>
-                  <th>Email Address</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th>Last Active</th>
-                  <th style={{ textAlign: 'center' }}>Actions</th>
+                <tr className="bg-surface/30 border-b border-border-dark text-text-muted font-bold">
+                  <th className="p-4">Full Name</th>
+                  <th className="p-4">Email Address</th>
+                  <th className="p-4">Role</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4">Last Active</th>
+                  <th className="p-4 text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border-dark/60 text-text-main font-medium">
                 {users.map(u => (
-                  <tr key={u._id}>
-                    <td style={{ fontWeight: 600 }}>{u.name}</td>
-                    <td>{u.email}</td>
-                    <td>
-                      <span className={`badge ${u.role === 'admin' ? 'badge-info' : 'badge-success'}`}>
+                  <tr key={u._id} className="hover:bg-surface/15">
+                    <td className="p-4 font-bold text-text-main">{u.name}</td>
+                    <td className="p-4">{u.email}</td>
+                    <td className="p-4">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                        u.role === 'admin' ? 'bg-cyan-500/10 border border-cyan-500/20 text-cyan-400' : 'bg-green-500/10 border border-green-500/20 text-green-400'
+                      }`}>
                         {u.role}
                       </span>
                     </td>
-                    <td>
-                      <span className={`badge ${u.status === 'active' ? 'badge-success' : 'badge-danger'}`}>
+                    <td className="p-4">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                        u.status === 'active' ? 'bg-green-500/10 border border-green-500/20 text-green-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                      }`}>
                         {u.status}
                       </span>
                     </td>
-                    <td>{formatDate(u.lastActiveAt)}</td>
-                    <td>
-                      <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                    <td className="p-4 text-text-muted">{formatDate(u.lastActiveAt)}</td>
+                    <td className="p-4">
+                      <div className="flex justify-center items-center gap-2">
                         <button 
                           onClick={() => setSelectedUser(u)}
-                          className="pagination-btn" 
-                          style={{ padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          title="View Account Details"
+                          className="px-2.5 py-1.5 rounded bg-surface hover:bg-surface/85 border border-border-dark text-[10px] font-bold text-text-main flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Inspect User details"
                         >
-                          <Eye size={14} />
+                          <Eye size={12} />
                           <span>Inspect</span>
                         </button>
 
                         {u.status === 'active' ? (
                           <button 
                             onClick={() => handleSuspend(u._id, u.name)}
-                            className="pagination-btn" 
-                            style={{ padding: '4px 8px', borderColor: 'rgba(239, 68, 68, 0.3)', color: 'var(--admin-danger)' }}
+                            className="p-1.5 rounded-lg border border-red-500/25 hover:bg-red-500/10 text-red-400 transition-colors cursor-pointer"
                             title="Suspend User"
                           >
-                            <ShieldAlert size={14} />
+                            <ShieldAlert size={12} />
                           </button>
                         ) : (
                           <button 
                             onClick={() => handleActivate(u._id, u.name)}
-                            className="pagination-btn" 
-                            style={{ padding: '4px 8px', borderColor: 'rgba(16, 185, 129, 0.3)', color: 'var(--admin-success)' }}
+                            className="p-1.5 rounded-lg border border-green-500/25 hover:bg-green-500/10 text-green-400 transition-colors cursor-pointer"
                             title="Activate User"
                           >
-                            <UserCheck size={14} />
+                            <UserCheck size={12} />
                           </button>
                         )}
 
                         <button 
                           onClick={() => handleDelete(u._id, u.name)}
-                          className="pagination-btn" 
-                          style={{ 
-                            padding: '4px 8px', 
-                            borderColor: u._id === currentUser?._id ? 'transparent' : 'rgba(239, 68, 68, 0.1)', 
-                            opacity: u._id === currentUser?._id ? 0.3 : 1, 
-                            cursor: u._id === currentUser?._id ? 'not-allowed' : 'pointer'
-                          }}
+                          className="p-1.5 rounded-lg border border-red-500/10 text-red-400 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                           disabled={u._id === currentUser?._id}
                           title={u._id === currentUser?._id ? "You cannot delete yourself" : "Delete Account"}
                         >
-                          <Trash2 size={14} style={{ color: 'var(--admin-danger)' }} />
+                          <Trash2 size={12} />
                         </button>
                       </div>
                     </td>
@@ -264,79 +265,84 @@ export default function AdminUsers({ currentUser }) {
           )}
         </div>
 
-        {/* Pagination Section */}
-        <div className="pagination-container">
-          <span style={{ fontSize: '13px', color: 'var(--admin-text-muted)', fontWeight: 500 }}>
-            Showing <strong>{users.length}</strong> of <strong>{totalUsers}</strong> accounts
+        {/* Paginator */}
+        <div className="flex justify-between items-center p-4 bg-surface/20 border-t border-border-dark">
+          <span className="text-xs text-text-muted font-medium">
+            Showing <strong className="text-text-main">{users.length}</strong> of <strong className="text-text-main">{totalUsers}</strong> accounts
           </span>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div className="flex items-center gap-3">
             <button 
               onClick={() => setPage(prev => Math.max(prev - 1, 1))} 
               disabled={page === 1}
-              className="pagination-btn"
-              style={{ display: 'flex', alignItems: 'center', padding: '6px' }}
+              className="p-1.5 rounded bg-surface hover:bg-surface/80 border border-border-dark text-text-muted hover:text-text-main transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <ChevronLeft size={16} />
+              <ChevronLeft size={14} />
             </button>
-            <span style={{ fontSize: '13px', color: 'var(--admin-text-muted)' }}>
-              Page <strong>{page}</strong> of <strong>{totalPages}</strong>
+            <span className="text-xs text-text-muted">
+              Page <strong className="text-text-main">{page}</strong> of <strong className="text-text-main">{totalPages}</strong>
             </span>
             <button 
               onClick={() => setPage(prev => Math.min(prev + 1, totalPages))} 
               disabled={page === totalPages}
-              className="pagination-btn"
-              style={{ display: 'flex', alignItems: 'center', padding: '6px' }}
+              className="p-1.5 rounded bg-surface hover:bg-surface/80 border border-border-dark text-text-muted hover:text-text-main transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={14} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Account Details Modal */}
+      {/* Account Inspect Details Modal */}
       {selectedUser && (
-        <div className="admin-modal-backdrop" onClick={() => setSelectedUser(null)}>
-          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="admin-modal-header">
-              <h3>Account Telemetry Details</h3>
-              <button onClick={() => setSelectedUser(null)} className="admin-modal-close-btn">
-                <X size={18} />
+        <div className="fixed inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedUser(null)}>
+          <div className="w-full max-w-md glass-card border border-border-dark shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-border-dark flex justify-between items-center bg-surface/30">
+              <h3 className="font-heading font-bold text-sm text-text-main">Account Telemetry Details</h3>
+              <button onClick={() => setSelectedUser(null)} className="text-text-muted hover:text-text-main cursor-pointer">
+                <X size={16} />
               </button>
             </div>
-            <div className="admin-modal-content">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--admin-border)', paddingBottom: '8px' }}>
-                  <span style={{ color: 'var(--admin-text-muted)', fontWeight: 500 }}>Database Object ID</span>
-                  <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>{selectedUser._id}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--admin-border)', paddingBottom: '8px' }}>
-                  <span style={{ color: 'var(--admin-text-muted)', fontWeight: 500 }}>Full Name</span>
-                  <span style={{ fontWeight: 600 }}>{selectedUser.name}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--admin-border)', paddingBottom: '8px' }}>
-                  <span style={{ color: 'var(--admin-text-muted)', fontWeight: 500 }}>Email Address</span>
-                  <span>{selectedUser.email}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--admin-border)', paddingBottom: '8px' }}>
-                  <span style={{ color: 'var(--admin-text-muted)', fontWeight: 500 }}>Role Setting</span>
-                  <span className={`badge ${selectedUser.role === 'admin' ? 'badge-info' : 'badge-success'}`}>{selectedUser.role}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--admin-border)', paddingBottom: '8px' }}>
-                  <span style={{ color: 'var(--admin-text-muted)', fontWeight: 500 }}>Account State</span>
-                  <span className={`badge ${selectedUser.status === 'active' ? 'badge-success' : 'badge-danger'}`}>{selectedUser.status}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--admin-border)', paddingBottom: '8px' }}>
-                  <span style={{ color: 'var(--admin-text-muted)', fontWeight: 500 }}>Last Activity Clocked</span>
-                  <span>{formatDate(selectedUser.lastActiveAt)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px' }}>
-                  <span style={{ color: 'var(--admin-text-muted)', fontWeight: 500 }}>Profile Created On</span>
-                  <span>{formatDate(selectedUser.createdAt)}</span>
-                </div>
+            
+            <div className="p-5 space-y-3.5 text-xs text-text-muted">
+              <div className="flex justify-between items-center border-b border-border-dark/60 pb-2.5">
+                <span className="font-semibold">Database ID</span>
+                <span className="font-mono text-text-main text-[11px] select-all bg-surface/50 px-2 py-0.5 rounded border border-border-dark">{selectedUser._id}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-border-dark/60 pb-2.5">
+                <span className="font-semibold">Full Name</span>
+                <span className="text-text-main font-bold">{selectedUser.name}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-border-dark/60 pb-2.5">
+                <span className="font-semibold">Email Address</span>
+                <span className="text-text-main font-semibold">{selectedUser.email}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-border-dark/60 pb-2.5">
+                <span className="font-semibold">Role Privilege</span>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                  selectedUser.role === 'admin' ? 'bg-cyan-500/10 border border-cyan-500/20 text-cyan-400' : 'bg-green-500/10 border border-green-500/20 text-green-400'
+                }`}>{selectedUser.role}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-border-dark/60 pb-2.5">
+                <span className="font-semibold">Account State</span>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                  selectedUser.status === 'active' ? 'bg-green-500/10 border border-green-500/20 text-green-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                }`}>{selectedUser.status}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-border-dark/60 pb-2.5">
+                <span className="font-semibold">Last Active Clocked</span>
+                <span className="text-text-main font-semibold">{formatDate(selectedUser.lastActiveAt)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-semibold">Profile Created On</span>
+                <span className="text-text-main font-semibold">{formatDate(selectedUser.createdAt)}</span>
               </div>
             </div>
-            <div className="admin-modal-footer">
-              <button onClick={() => setSelectedUser(null)} className="pagination-btn">
+
+            <div className="p-4 border-t border-border-dark bg-surface/30 flex justify-end">
+              <button 
+                onClick={() => setSelectedUser(null)} 
+                className="px-4 py-2 rounded-lg bg-surface hover:bg-surface/85 border border-border-dark text-xs font-semibold text-text-main cursor-pointer"
+              >
                 Close Details
               </button>
             </div>

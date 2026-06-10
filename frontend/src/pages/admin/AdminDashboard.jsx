@@ -4,7 +4,7 @@ import {
   Users, FileText, ClipboardList, MessageSquare, Briefcase, 
   Percent, Clock, DollarSign, RefreshCw, AlertCircle, Sparkles, TrendingUp
 } from 'lucide-react';
-import '../../admin.css';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from 'recharts';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -36,10 +36,10 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="admin-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
-        <div style={{ textAlign: 'center' }}>
-          <RefreshCw className="spinner" size={40} style={{ color: 'var(--admin-primary)' }} />
-          <p style={{ marginTop: '12px', color: 'var(--admin-text-muted)', fontWeight: 600 }}>Loading admin metrics...</p>
+      <div className="flex items-center justify-center min-h-[60vh] text-text-muted">
+        <div className="text-center space-y-3">
+          <RefreshCw className="spinner text-primary mx-auto" size={36} />
+          <p className="text-sm font-semibold">Loading admin metrics...</p>
         </div>
       </div>
     );
@@ -47,19 +47,16 @@ export default function AdminDashboard() {
 
   if (error) {
     return (
-      <div className="admin-container">
-        <div className="auth-error-alert" style={{ margin: '40px 0', padding: '20px', borderRadius: '12px' }}>
-          <AlertCircle size={24} style={{ marginRight: '12px' }} />
-          <div>
-            <h4 style={{ margin: 0, fontWeight: 700 }}>Access Error</h4>
-            <p style={{ margin: '4px 0 0 0', fontSize: '14px' }}>{error}</p>
-          </div>
+      <div className="p-6 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex gap-3 max-w-xl mx-auto my-12">
+        <AlertCircle size={24} className="flex-shrink-0" />
+        <div>
+          <h4 className="font-bold">Access Error</h4>
+          <p className="text-xs mt-1">{error}</p>
         </div>
       </div>
     );
   }
 
-  // Fallbacks if stats fail to load
   const totalUsers = stats?.totalUsers || 0;
   const activeUsers = stats?.activeUsers || 0;
   const newUsersThisWeek = stats?.newUsersThisWeek || 0;
@@ -69,72 +66,19 @@ export default function AdminDashboard() {
   const jobSearchesCount = stats?.jobSearchesCount || 0;
   const averageAtsScore = stats?.averageAtsScore || 0;
 
-  // Dynamic engagement trend chart preparation
+  // Recharts line chart data
   const trendData = stats?.activityTrend && stats.activityTrend.length > 0
-    ? stats.activityTrend
+    ? stats.activityTrend.map(d => ({ name: d.day, count: d.count }))
     : [
-        { day: 'Mon', count: 0 },
-        { day: 'Tue', count: 0 },
-        { day: 'Wed', count: 0 },
-        { day: 'Thu', count: 0 },
-        { day: 'Fri', count: 0 },
-        { day: 'Sat', count: 0 },
-        { day: 'Sun', count: 0 }
+        { name: 'Mon', count: 0 },
+        { name: 'Tue', count: 0 },
+        { name: 'Wed', count: 0 },
+        { name: 'Thu', count: 0 },
+        { name: 'Fri', count: 0 },
+        { name: 'Sat', count: 0 },
+        { name: 'Sun', count: 0 }
       ];
 
-  const maxCount = Math.max(...trendData.map(d => d.count), 0);
-  const scaleFactor = Math.max(maxCount, 5);
-  const divisor = trendData.length > 1 ? trendData.length - 1 : 1;
-  const points = trendData.map((d, i) => {
-    const x = 40 + i * (440 / divisor);
-    const y = 170 - (d.count / scaleFactor) * 150;
-    return { x, y, day: d.day, count: d.count };
-  });
-
-  const yMaxLabel = maxCount > 0 ? maxCount : 5;
-  const yMedLabel = maxCount > 0 ? Math.round(maxCount / 2) : 2;
-  const yLowLabel = 0;
-
-  const getControlPoints = (p0, p1, p2, p3, t = 0.15) => {
-    const cp1x = p1.x + (p2.x - p0.x) * t;
-    const cp1y = p1.y + (p2.y - p0.y) * t;
-    const cp2x = p2.x - (p3.x - p1.x) * t;
-    const cp2y = p2.y - (p3.y - p1.y) * t;
-    return [
-      Math.max(40, Math.min(480, cp1x)),
-      Math.max(20, Math.min(170, cp1y)),
-      Math.max(40, Math.min(480, cp2x)),
-      Math.max(20, Math.min(170, cp2y))
-    ];
-  };
-
-  let linePath = '';
-  let fillPath = '';
-
-  if (points.length > 0) {
-    linePath = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 0; i < points.length - 1; i++) {
-      const p1 = points[i];
-      const p2 = points[i + 1];
-      const p0 = points[i - 1] || p1;
-      const p3 = points[i + 2] || p2;
-      const [cp1x, cp1y, cp2x, cp2y] = getControlPoints(p0, p1, p2, p3);
-      linePath += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
-    }
-
-    fillPath = `M ${points[0].x} 170 L ${points[0].x} ${points[0].y}`;
-    for (let i = 0; i < points.length - 1; i++) {
-      const p1 = points[i];
-      const p2 = points[i + 1];
-      const p0 = points[i - 1] || p1;
-      const p3 = points[i + 2] || p2;
-      const [cp1x, cp1y, cp2x, cp2y] = getControlPoints(p0, p1, p2, p3);
-      fillPath += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
-    }
-    fillPath += ` L ${points[points.length - 1].x} 170 Z`;
-  }
-
-  // AI details
   const totalGemini = typeof aiStats?.totalGeminiRequests === 'number' ? aiStats.totalGeminiRequests : 0;
   const totalGroq = typeof aiStats?.totalGroqRequests === 'number' ? aiStats.totalGroqRequests : 0;
   const totalAiRequests = totalGemini + totalGroq;
@@ -143,283 +87,275 @@ export default function AdminDashboard() {
   const averageLatency = typeof aiStats?.averageLatency === 'number' ? Math.round(aiStats.averageLatency) : 0;
   const estimatedCost = typeof aiStats?.estimatedCost === 'number' ? aiStats.estimatedCost : 0.0000;
 
+  // Recharts donut chart data
+  const modelPieData = [
+    { name: 'Gemini', value: totalGemini, color: '#7C3AED' },
+    { name: 'Groq', value: totalGroq, color: '#06B6D4' }
+  ];
+
   return (
-    <div className="admin-container">
-      <div className="admin-header">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1>Admin Overview</h1>
-          <p>Real-time system statistics and usage analytics</p>
+          <h1 className="text-3xl font-heading font-extrabold text-text-main tracking-tight">Admin Overview</h1>
+          <p className="text-text-muted text-sm mt-1">Real-time system statistics and usage analytics</p>
         </div>
         <button 
-          onClick={fetchDashboardData} 
-          className="pagination-btn" 
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px' }}
+          onClick={fetchDashboardData}
+          className="px-4 py-2.5 rounded-lg bg-surface border border-border-dark text-xs font-semibold text-text-main hover:text-primary hover:border-primary/40 transition-all flex items-center gap-2 cursor-pointer"
         >
-          <RefreshCw size={16} />
+          <RefreshCw size={14} />
           <span>Refresh Stats</span>
         </button>
       </div>
 
-      {/* KPI Cards Grid */}
-      <div className="kpi-grid animate-fade-in">
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper kpi-blue">
-            <Users size={22} />
+      {/* KPI Cards Row 1 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="p-6 glass-card border border-border-dark relative overflow-hidden flex flex-col justify-between min-h-[140px]">
+          <div className="flex justify-between items-start">
+            <span className="text-xs font-semibold text-text-muted">Total Accounts</span>
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
+              <Users size={16} />
+            </div>
           </div>
-          <div className="kpi-title">Total Accounts</div>
-          <div className="kpi-value">{totalUsers}</div>
-          <div className="kpi-footer">
-            <TrendingUp size={14} style={{ color: 'var(--admin-success)' }} />
-            <span style={{ color: 'var(--admin-success)', fontWeight: 600 }}>+{newUsersThisWeek}</span>
-            <span>registered this week</span>
-          </div>
-        </div>
-
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper kpi-green">
-            <Users size={22} />
-          </div>
-          <div className="kpi-title">Active Users (30d)</div>
-          <div className="kpi-value">{activeUsers}</div>
-          <div className="kpi-footer">
-            <span>Uptime activity:</span>
-            <span style={{ fontWeight: 600, color: 'var(--admin-text-dark)' }}>
-              {totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 100) : 0}%
-            </span>
+          <div className="mt-4">
+            <h2 className="text-2xl font-heading font-extrabold text-text-main">{totalUsers}</h2>
+            <div className="flex items-center gap-1 mt-1 text-[10px] text-green-400">
+              <TrendingUp size={12} />
+              <span className="font-bold">+{newUsersThisWeek}</span>
+              <span className="text-text-muted">registered this week</span>
+            </div>
           </div>
         </div>
 
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper kpi-orange">
-            <FileText size={22} />
+        <div className="p-6 glass-card border border-border-dark relative overflow-hidden flex flex-col justify-between min-h-[140px]">
+          <div className="flex justify-between items-start">
+            <span className="text-xs font-semibold text-text-muted">Active Users (30d)</span>
+            <div className="w-8 h-8 rounded-lg bg-green-500/10 text-green-400 flex items-center justify-center">
+              <Users size={16} />
+            </div>
           </div>
-          <div className="kpi-title">ATS Match Scans</div>
-          <div className="kpi-value">{resumeAnalysesCount}</div>
-          <div className="kpi-footer">
-            <Percent size={14} />
-            <span>Avg Match score:</span>
-            <span style={{ fontWeight: 600, color: 'var(--admin-text-dark)' }}>{averageAtsScore}%</span>
-          </div>
-        </div>
-
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper kpi-purple">
-            <MessageSquare size={22} />
-          </div>
-          <div className="kpi-title">Mock Interviews</div>
-          <div className="kpi-value">{mockInterviewsCount}</div>
-          <div className="kpi-footer">
-            <span>Total practice sessions completed</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Second KPI row for AI Metrics */}
-      <div className="kpi-grid animate-fade-in">
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper kpi-blue">
-            <Sparkles size={22} />
-          </div>
-          <div className="kpi-title">AI Requests (Gemini + Groq)</div>
-          <div className="kpi-value">{totalAiRequests}</div>
-          <div className="kpi-footer">
-            <span>Gemini: {totalGemini} | Groq: {totalGroq}</span>
+          <div className="mt-4">
+            <h2 className="text-2xl font-heading font-extrabold text-text-main">{activeUsers}</h2>
+            <p className="text-[10px] text-text-muted mt-1">
+              Uptime active: <strong className="text-text-main">{totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 100) : 0}%</strong>
+            </p>
           </div>
         </div>
 
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper kpi-green">
-            <Percent size={22} />
+        <div className="p-6 glass-card border border-border-dark relative overflow-hidden flex flex-col justify-between min-h-[140px]">
+          <div className="flex justify-between items-start">
+            <span className="text-xs font-semibold text-text-muted">ATS Match Scans</span>
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
+              <FileText size={16} />
+            </div>
           </div>
-          <div className="kpi-title">LLM Success Rate</div>
-          <div className="kpi-value">{successRate}%</div>
-          <div className="kpi-footer">
-            <span style={{ color: failedAiRequests > 0 ? 'var(--admin-danger)' : 'var(--admin-success)' }}>
-              {failedAiRequests} failed requests recorded
-            </span>
-          </div>
-        </div>
-
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper kpi-orange">
-            <Clock size={22} />
-          </div>
-          <div className="kpi-title">Average Latency</div>
-          <div className="kpi-value">{averageLatency} ms</div>
-          <div className="kpi-footer">
-            <span>API round-trip response time</span>
+          <div className="mt-4">
+            <h2 className="text-2xl font-heading font-extrabold text-text-main">{resumeAnalysesCount}</h2>
+            <p className="text-[10px] text-text-muted mt-1">
+              Avg Match score: <strong className="text-text-main">{averageAtsScore}%</strong>
+            </p>
           </div>
         </div>
 
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper kpi-red">
-            <DollarSign size={22} />
+        <div className="p-6 glass-card border border-border-dark relative overflow-hidden flex flex-col justify-between min-h-[140px]">
+          <div className="flex justify-between items-start">
+            <span className="text-xs font-semibold text-text-muted">Mock Interviews</span>
+            <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
+              <MessageSquare size={16} />
+            </div>
           </div>
-          <div className="kpi-title">Estimated Cost</div>
-          <div className="kpi-value">${estimatedCost.toFixed(4)}</div>
-          <div className="kpi-footer">
-            <span>Calculated from token weightings</span>
+          <div className="mt-4">
+            <h2 className="text-2xl font-heading font-extrabold text-text-main">{mockInterviewsCount}</h2>
+            <p className="text-[10px] text-text-muted mt-1">Total practice runs logged</p>
           </div>
         </div>
       </div>
 
-      {/* Charts Panel */}
-      <div className="charts-grid animate-fade-in">
-        {/* User Engagement SVG Line Chart */}
-        <div className="chart-card">
-          <h3>System Engagement Activity</h3>
-          <div className="svg-chart-container">
-            <svg viewBox="0 0 500 200" style={{ width: '100%', height: '100%' }}>
-              <defs>
-                <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#2563eb" stopOpacity="0.2" />
-                  <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              {/* Grid Lines */}
-              <line x1="40" y1="20" x2="480" y2="20" stroke="#f1f5f9" strokeWidth="1" />
-              <line x1="40" y1="60" x2="480" y2="60" stroke="#f1f5f9" strokeWidth="1" />
-              <line x1="40" y1="100" x2="480" y2="100" stroke="#f1f5f9" strokeWidth="1" />
-              <line x1="40" y1="140" x2="480" y2="140" stroke="#f1f5f9" strokeWidth="1" />
-              <line x1="40" y1="170" x2="480" y2="170" stroke="#f1f5f9" strokeWidth="2" />
-              
-              {/* Gradient Area */}
-              {fillPath && (
-                <path 
-                  d={fillPath} 
-                  fill="url(#chartGradient)" 
-                />
-              )}
-              
-              {/* Main Line */}
-              {linePath && (
-                <path 
-                  d={linePath} 
-                  fill="none" 
-                  stroke="#2563eb" 
-                  strokeWidth="3.5" 
-                  className="chart-line" 
-                />
-              )}
-
-              {/* Data points */}
-              {points.map((p, i) => (
-                <g key={i} className="chart-point-group">
-                  <circle 
-                    cx={p.x} 
-                    cy={p.y} 
-                    r="5" 
-                    fill="#2563eb" 
-                    stroke="#ffffff" 
-                    strokeWidth="2" 
-                    style={{ transition: 'all 0.3s ease' }}
-                  />
-                  {/* Tooltip / hover target */}
-                  <circle 
-                    cx={p.x} 
-                    cy={p.y} 
-                    r="12" 
-                    fill="transparent" 
-                    className="hover-trigger"
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <title>{`${p.day}: ${p.count} activities`}</title>
-                  </circle>
-                </g>
-              ))}
-
-              {/* Axes Labels */}
-              {points.map((p, i) => (
-                <text key={i} x={p.x} y={190} fill="var(--admin-text-muted)" fontSize="10" textAnchor="middle">
-                  {p.day}
-                </text>
-              ))}
-
-              <text x="30" y="173" fill="var(--admin-text-muted)" fontSize="9" textAnchor="end">{yLowLabel}</text>
-              <text x="30" y="95" fill="var(--admin-text-muted)" fontSize="9" textAnchor="end">{yMedLabel}</text>
-              <text x="30" y="23" fill="var(--admin-text-muted)" fontSize="9" textAnchor="end">{yMaxLabel}</text>
-            </svg>
+      {/* KPI Cards Row 2 (AI Metrics) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="p-6 glass-card border border-border-dark relative overflow-hidden flex flex-col justify-between min-h-[140px]">
+          <div className="flex justify-between items-start">
+            <span className="text-xs font-semibold text-text-muted">AI Queries (Gemini+Groq)</span>
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
+              <Sparkles size={16} />
+            </div>
+          </div>
+          <div className="mt-4">
+            <h2 className="text-2xl font-heading font-extrabold text-text-main">{totalAiRequests}</h2>
+            <p className="text-[10px] text-text-muted mt-1">Gemini: {totalGemini} | Groq: {totalGroq}</p>
           </div>
         </div>
 
-        {/* AI Provider Distribution Donut Chart */}
-        <div className="chart-card">
-          <h3>AI Models Used</h3>
-          <div className="svg-chart-container" style={{ position: 'relative' }}>
+        <div className="p-6 glass-card border border-border-dark relative overflow-hidden flex flex-col justify-between min-h-[140px]">
+          <div className="flex justify-between items-start">
+            <span className="text-xs font-semibold text-text-muted">LLM Success SLA</span>
+            <div className="w-8 h-8 rounded-lg bg-green-500/10 text-green-400 flex items-center justify-center">
+              <Percent size={16} />
+            </div>
+          </div>
+          <div className="mt-4">
+            <h2 className="text-2xl font-heading font-extrabold text-text-main">{successRate}%</h2>
+            <p className="text-[10px] text-red-400 mt-1">{failedAiRequests} outages logged</p>
+          </div>
+        </div>
+
+        <div className="p-6 glass-card border border-border-dark relative overflow-hidden flex flex-col justify-between min-h-[140px]">
+          <div className="flex justify-between items-start">
+            <span className="text-xs font-semibold text-text-muted">Average Latency</span>
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
+              <Clock size={16} />
+            </div>
+          </div>
+          <div className="mt-4">
+            <h2 className="text-2xl font-heading font-extrabold text-text-main">{averageLatency} ms</h2>
+            <p className="text-[10px] text-text-muted mt-1">API round-trip response time</p>
+          </div>
+        </div>
+
+        <div className="p-6 glass-card border border-border-dark relative overflow-hidden flex flex-col justify-between min-h-[140px]">
+          <div className="flex justify-between items-start">
+            <span className="text-xs font-semibold text-text-muted">Estimated LLM Cost</span>
+            <div className="w-8 h-8 rounded-lg bg-red-500/10 text-red-400 flex items-center justify-center">
+              <DollarSign size={16} />
+            </div>
+          </div>
+          <div className="mt-4">
+            <h2 className="text-2xl font-heading font-extrabold text-text-main">${estimatedCost.toFixed(4)}</h2>
+            <p className="text-[10px] text-text-muted mt-1">Calculated from token weightings</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Visualizations Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* Engagement Area Chart */}
+        <div className="lg:col-span-8 p-6 glass-card border border-border-dark space-y-4">
+          <h3 className="font-heading font-bold text-sm text-text-main">System Engagement Activity</h3>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="adminChartGlow" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#7C3AED" stopOpacity={0.0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="name" stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="#94A3B8" fontSize={11} tickLine={false} axisLine={false} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#111827', 
+                    borderColor: 'rgba(255, 255, 255, 0.08)', 
+                    borderRadius: '8px',
+                    color: '#F8FAFC',
+                    fontSize: '12px'
+                  }} 
+                />
+                <Area type="monotone" dataKey="count" name="Activities" stroke="#7C3AED" strokeWidth={2.5} fillOpacity={1} fill="url(#adminChartGlow)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* AI Provider Pie Chart */}
+        <div className="lg:col-span-4 p-6 glass-card border border-border-dark flex flex-col justify-between">
+          <h3 className="font-heading font-bold text-sm text-text-main">AI Models Used</h3>
+          
+          <div className="h-44 w-full flex items-center justify-center relative">
             {totalAiRequests === 0 ? (
-              <p style={{ color: 'var(--admin-text-muted)', fontSize: '13px' }}>No AI requests logged yet.</p>
+              <p className="text-xs text-text-muted italic">No AI requests logged.</p>
             ) : (
-              <>
-                <svg viewBox="0 0 160 160" style={{ width: '130px', height: '130px' }}>
-                  {/* Background Circle */}
-                  <circle cx="80" cy="80" r="60" fill="none" stroke="#f1f5f9" strokeWidth="18" />
-                  
-                  {/* Gemini portion */}
-                  <circle 
-                    cx="80" 
-                    cy="80" 
-                    r="60" 
-                    fill="none" 
-                    stroke="#2563eb" 
-                    strokeWidth="18" 
-                    strokeDasharray={`${(totalGemini / totalAiRequests) * 377} 377`}
-                    transform="rotate(-90 80 80)"
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={modelPieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={70}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {modelPieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#111827', 
+                      borderColor: 'rgba(255, 255, 255, 0.08)',
+                      borderRadius: '8px',
+                      color: '#F8FAFC',
+                      fontSize: '11px'
+                    }} 
                   />
-
-                  {/* Center stats */}
-                  <text x="80" y="77" fill="var(--admin-text-dark)" fontSize="14" fontWeight="800" textAnchor="middle">
-                    {totalAiRequests}
-                  </text>
-                  <text x="80" y="94" fill="var(--admin-text-muted)" fontSize="8" fontWeight="600" textAnchor="middle">
-                    Requests
-                  </text>
-                </svg>
-                {/* Custom Legend */}
-                <div style={{ position: 'absolute', bottom: '10px', left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: '16px', fontSize: '11px', fontWeight: 600 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#2563eb', display: 'inline-block' }}></span>
-                    <span>Gemini ({totalGemini})</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#cbd5e1', display: 'inline-block' }}></span>
-                    <span>Groq ({totalGroq})</span>
-                  </div>
-                </div>
-              </>
+                </PieChart>
+              </ResponsiveContainer>
             )}
+            
+            <div className="absolute flex flex-col items-center justify-center">
+              <span className="text-lg font-heading font-extrabold text-text-main">{totalAiRequests}</span>
+              <span className="text-[9px] font-bold text-text-muted uppercase tracking-wider">Requests</span>
+            </div>
+          </div>
+
+          <div className="flex justify-center gap-6 pt-4 border-t border-border-dark text-xs text-text-muted font-semibold">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-primary inline-block"></span>
+              <span>Gemini ({totalGemini})</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-secondary inline-block"></span>
+              <span>Groq ({totalGroq})</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Feature Usage Details Table */}
-      <div className="table-card animate-fade-in">
-        <div className="table-header-row">
-          <h3>Interactive Modules Usage</h3>
+      {/* Table Module Metrics */}
+      <div className="glass-card border border-border-dark overflow-hidden">
+        <div className="p-4 border-b border-border-dark bg-surface/30">
+          <h3 className="font-heading font-bold text-sm text-text-main">Interactive Modules Usage</h3>
         </div>
-        <div className="table-wrapper">
-          <table className="admin-table">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr>
-                <th>Module / Activity Type</th>
-                <th>Global Run Metric</th>
-                <th>Service Status Indicator</th>
+              <tr className="bg-surface/10 border-b border-border-dark text-text-muted font-bold">
+                <th className="p-4">Module / Activity Type</th>
+                <th className="p-4">Global Run Metric</th>
+                <th className="p-4">Service Status Indicator</th>
               </tr>
             </thead>
-            <tbody>
-              <tr>
-                <td><strong>Job Searches Run</strong></td>
-                <td>{jobSearchesCount} searches recorded</td>
-                <td><span className="badge badge-success">Healthy</span></td>
+            <tbody className="divide-y divide-border-dark/60 text-text-main font-medium">
+              <tr className="hover:bg-surface/20">
+                <td className="p-4 font-semibold text-text-main">Job Searches Run</td>
+                <td className="p-4">{jobSearchesCount} searches recorded</td>
+                <td className="p-4">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-green-500/10 border border-green-500/20 text-green-400">
+                    Healthy
+                  </span>
+                </td>
               </tr>
-              <tr>
-                <td><strong>Quiz Attempts Saved</strong></td>
-                <td>{quizAttemptsCount} completions logged</td>
-                <td><span className="badge badge-success">Healthy</span></td>
+              <tr className="hover:bg-surface/20">
+                <td className="p-4 font-semibold text-text-main">Quiz Attempts Saved</td>
+                <td className="p-4">{quizAttemptsCount} completions logged</td>
+                <td className="p-4">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-green-500/10 border border-green-500/20 text-green-400">
+                    Healthy
+                  </span>
+                </td>
               </tr>
-              <tr>
-                <td><strong>Resume Tailor Requests</strong></td>
-                <td>All tailoring requests saved in reports</td>
-                <td><span className="badge badge-success">Healthy</span></td>
+              <tr className="hover:bg-surface/20">
+                <td className="p-4 font-semibold text-text-main">Resume Tailor Requests</td>
+                <td className="p-4">All tailoring requests saved in reports</td>
+                <td className="p-4">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-green-500/10 border border-green-500/20 text-green-400">
+                    Healthy
+                  </span>
+                </td>
               </tr>
             </tbody>
           </table>
